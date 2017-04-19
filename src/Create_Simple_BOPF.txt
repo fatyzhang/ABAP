@@ -1,0 +1,33 @@
+Step 1. BO Creation
+1.1 Transaction /BOBF/CONF_UI
+1.2 command "debug" in case Create button disable
+1.3 Create and Name as ZMY_CUSTOMER, description "My first BO in BOPF"
+1.4 maintain prefix "ZMY", object category "Master Data Object"
+
+Step 2. Maintain BO settings
+2.1 Menu path Extras -> Propose Repository Names
+2.2 Select "Constants Interface name" at this point. till now we just named the interface.
+2.3 Extras->Generate Repository Objects -> Generate constant Interface.
+
+Step 3. Business Object Nodes
+3.1 Propose names for DDIC elements.  Extras->Propose Repository Names
+3.2 Generate DDIC elements. first, Data structure should be created manually. 
+3.3 Generate DDIC elements by Extras->Generate Repository Objects -> Generate Dictionary Objects
+3.4 ## Regenerate constant interface after creating every new elemetns.
+
+Till now, the BO can be already used. Test it by BOPF TEST UI application - click on the execute button or press F8. 
+or Transaction /BOBF/TEST_UI. 
+
+Step 4. Adding Sub Node to the BO
+4.1 via Context menu, select one of the node type "Standard Node"  "Delegated Node" "Business Object Representation Node"
+4.2 Maintain the node name "BANK_DETAILS", description "Bank Details" and DDIC elements combined structure/table type/data structure/db tables.
+4.3 the guide allows to maintain an attribute mapping, but this is not required here as we don't have proxy BO. 
+4.4 Got to SE11 to create structure and then generate the combined structure/data table type/ db table. 
+
+Step 5. Creation of a Query 
+5.1 In node element of the tree. select "ROOT" node and "Create Query" via the context menu.
+5.2 Query Name "SELECT_BY_ELEMENTS", Query Class "ZCL_MY_Q_CUST_ROOT_SEL_BY_ELEM", data type "ZMY_S_CUST_ROOT_D". Result Type "ZMY_S_CUST_ROOT", result table type "ZMY_T_CUST_ROOT".
+5.3 Double click on the name of query class, redefine the query method in the created class. Refor code samples. /bobf/if_frw_query~query.
+
+
+
