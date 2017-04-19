@@ -1,0 +1,1472 @@
+*-------------------------------------------------------------------------------*
+* ######## Part 1 Development environment  ###########
+*-------------------------------------------------------------------------------*
+*-------------------------------------------------------------------------------*
+* #1 Pragmas
+*-------------------------------------------------------------------------------*
+
+Syntax: ##PRAGMA[PAR1][PAR2]
+* case-insenstive
+example: 
+data: spfli_tab
+			type hashed table of spfli
+			with unique key carrid connid
+			with non-unique sorted key k_cityfrom components cityfrom.
+loop at spfli_tab .. where cityfrom = city ##PRIMKEY[K_CITYFROM].
+
+* Suppress warning "Secondary key k_cityfrom is .. better suited".
+
+*-------------------------------------------------------------------------------*
+* #2 Source Code-Based Class Builder	
+*-------------------------------------------------------------------------------*
+Utilities->Settings->Class Builder->Source Code Base Editor
+
+
+*-------------------------------------------------------------------------------*
+* #3 Code Completion	
+*-------------------------------------------------------------------------------*
+CTRL+SPACE   code completion 
+CTRL+SHIFT+ENTER   not only code completion but generates the whole call syntax, paramsters etc.
+The code completion thus replaces the "Pattnerns" for function and method calls.
+
+*-------------------------------------------------------------------------------*
+* #4 Type aheas search help	
+*-------------------------------------------------------------------------------*
+Swith on: Search help -> Enhanced Options -> Proposal Search for Input fields.
+Multi-Column Full Text Search -> only supported with SAP HANA DB. 
+Prerequisites for fuzzy text search: 
+	a. SAP HANA database
+	b. Data foundation is a column store table
+	c. Full text index (enabled for fuzzy search)
+
+*-------------------------------------------------------------------------------*
+* #5 ADT- ABAP Development Tools for Eclipse	
+*-------------------------------------------------------------------------------*
+Getting Started: Create a project
+ABAP Project: log on to one ABAP system (System ID, Client, User, and Password)
+Favorite packages per ABAP project
+Multiple ABAP projects in one Eclipse
+*-------------------------------------------------------------------------------*
+* #6 new DDIC tool in Eclipse	
+*-------------------------------------------------------------------------------*
+NW7.40 introduced three new Dictionary Objects:
+	Extenal View     - only relevant for SAP HANA
+	Database Procedure Proxy  - only relevant for SAP HANA
+	CDS View - DB independent. 
+in NW7.50 new Eclipse-native Editors were introduced for Data Elements and Structures.
+
+Structures: definition in source code. 
+
+@EndUserText.label : 'Customer Structure'
+@AbapCatalog.enhancementCategory : #NOT_EXTENSIBLE
+define type ykz_cust {
+  @AbapCatalog.foreignKey.screenCheck : false
+  key id : s_customer
+    with foreign key [0..1,1] sbuspart
+      where mandant = syst.mandt
+        and buspartnum = ykz_cust.id 
+    with value help scustom_name
+      where id = ykz_cust.id
+        and name = ykz_cust.name;
+  name   : s_custname;
+
+}
+
+*-------------------------------------------------------------------------------*
+* #7 ABAP Expressions	
+*-------------------------------------------------------------------------------*
+Nested expressions
+gv_char1 = replace( val = gv_char1 
+					sub = 'XYZ' 
+					with = to_upper( gv_char2 ) ).
+
+*-------------------------------------------------------------------------------*
+* #8 Processing strings using ABAP Expressions and Functions
+*-------------------------------------------------------------------------------*
+Concatenating Strings
+Before: 
+concatenate gv_var1 gv_var2 into gv_result separated by <sep>.
+
+After:
+gv_result = gv_var1 && gv_var2. 
+
+String Templates: allow you to construct a string in your program using literals, 
+variables, and embedded functions.
+syntax 1: 
+Data gv_string Type string.
+gv_string = |Hello World|. 
+
+syntax 2:
+Data gv_string type string.
+Parameters: pa_name type string.
+gv_string = |Hello { pa_name }|.
+
+Formatting string templates
+DATA gv_string TYPE string.
+gv_string = |{ sy-datum }.
+write gv_string.
+
+Formatting Directives in String Templates
+DATA gv_string TYPE string.
+gv_string = |{ sy-datum date = user}|.
+
+DATA gv_string TYPE string.
+CONSTANTS gc_pi TYPE p LENGTH 3 DECIMALS 3 VALUE '3.142'.
+gv_string = |{ gc_pi number = user}|.
+
+KEY VALUES: RAW , ISO , USER or ENVIRONMENT. 
+			WIDTH, ALIGN, PAD. 
+
+New Functions:
+distance      condense          concat_lines_of
+escape        find              find_end
+find_any_of   find_any_not_of   insert
+repeat        replace           reverse
+segment       shift_left        shift_right
+substring     substring_after   substring_from
+substring_before substring_to   to_upper
+to_lower      to_mixed          from_mixed
+translate     contains
+
+stadant arguments of string processing functions:
+case - equivalent to RESPECTING CASE addtion. Specific whether should be case-sensitive, by default ->true. 
+occ  - Occurrence, positive values count occ from the begging of string, negative values count from end. 
+off  - Offset
+len  - length 
+regex - Regular expression to be found, replaced, or matched
+val  - String to be processed
+sub  - Substring to be found or replaced
+
+Example:
+Data gv_string TYPE string.
+gv_string = 'ABAP uses lots of statements'.
+gv_string = replace( val = gv_string 
+					 sub = 'STATEMENTS'
+					 case = abap_false 
+					 with = 'expressions'). 
+a case insensitive search for substring "STATEMENTS", then it is replaced by "EXPRESSIONS".
+
+*-------------------------------------------------------------------------------*
+* #9 Inline Decalarations
+*-------------------------------------------------------------------------------*
+http://help-legacy.sap.com/abapdocu_740/en/abendeclaration_positions.htm
+Before:
+Data gx_excp TYPE REF TO cx_sy_move_cast_error.
+TRY.
+	go_oref2 ?= go_oref1.
+	CATCH cx_sy_move_cast_error INTO gx_excp.
+ENDTRY.
+
+After:
+TRY.
+	go_oref2 ?= go_oref1.
+	CATCH cx_sy_move_cast_error INTO data(gx_excp).
+ENDTRY.
+
+in method parameters:
+cl_salv_table=>factory( importing r_salva_table = data(go_alv)
+						changing t_table = gt_data ).
+
+internal table with work area:
+LOOP AT gt_itab INTO data(gs_line).
+...
+ENDLOOP.
+
+READ TABLE gt_itab INTO data(gs_line) INDEX n. ...
+Note, to make program easiser to understand, only use these variables in the loop in which you declare them. 
+if you want to reuse a work area, declare it with a conventional DATA statament.
+
+internal tables with field symbol
+LOOP AT gt_itab ASSIGNING FIELD-SYMBOL(<line>).
+ENDLOOP.
+READ TABLE gt_itab ASSIGNING FIELD-SYMBOL(<line>) INDEX n.
+
+*-------------------------------------------------------------------------------*
+* #10 Create Objects and Casting Using Expressions
+*-------------------------------------------------------------------------------*
+BEFORE:
+DATA: go_custom TYPE REF TO cl_gui_custom_container,
+	  go_alv TYPE REF TO cl_gui_alv_grid.
+CREATE OBJECT go_custom EXPORTING container_name = 'CUSTOM100'.
+CREATE OBJECT go_alv EXPROTING i_parent = go_custom.
+
+AFTER:
+DATA: go_custom TYPE REF TO cl_gui_custom_container,
+	  go_alv TYPE REF TO cl_gui_alv_grid.
+go_custom = NEW # ( container_name = 'CUSTOM100').
+go_alv    = NEW # ( i_parent = go_custom ).
+pound sign (#) denotes that the class should be derived from the definition of reference variables.
+Note, handle exception in TRY CATCH ENDTRY as normal. 
+
+it is possible to use NEW operator as an actual parameter of a method.
+go_alv = NEW # ( i_parenet = NEW cl_gui_custom_container( container_name = 'CUSTOM100') ).
+
+CASTING Operations with CAST() 
+DATA: gt_ddic_fields TYPE ddfields.
+gt_ddic_fields = CAST cl_abap_structdescr(cl_abap_typedescr=>describe_by_name( 'SFLIGHT') )->get_ddic_fields().
+
+similar like ?= operator, CAST make it is possible to continue the method chain after CAST.
+
+Using the INSTANCE of Expression
+DATA: go_vehicle TYPE REF TO cl_vehicle,
+      go_truck TYPE REF TO cl_truck,
+      go_class TYPE REF TO cl_abap_classdescr.
+CREATE OBJECT go_truck.
+go_vehicle = go_truck.
+go_class ?= cl_abap_typedescr=>describe_by_object_ref( go_vehicle ).
+if go_class->get_relative_name() = 'CL_TRUCK'.
+	go_truck = ?= go_vehicle.
+endif.
+AFTER:
+if go_vehicle IS INSTANCE OF cl_truck.
+	go_truck ?= go_vehicle.
+endif.
+
+Using CAST TYPE
+
+CASE TYPE OF go_vehicle.
+	WHEN TYPE cl_truck INTO go_truck.
+	WHEN OTHERS.
+ENDCASE.  
+it allows you to distinguish between different possible types of an object reference.
+the optional addition INTO allows you to perform a down cast directly by a reference variable.
+you may use inline data decalaration after INTO. 
+
+*-------------------------------------------------------------------------------*
+* #11 Assigning values using Expressions
+*-------------------------------------------------------------------------------*
+"VALUE" 
+
+BEFORE: 
+DATA: gt_range TYPE RANGE OF sflight-carrid,
+	  gs_range LIKE LINE OF gt_range.
+gs_range-sign = 'I'. gs_range-option = 'BT'.
+gs_range-low = 'AA'. gs_range-high = 'DL'.
+APPEND gs_range TO gt_range.
+class=>method( it_range = gt_range ).
+
+AFTER:
+class=>method( it_range = VALUE #( (sign = 'I' option = 'BT' low = 'AA' high = 'DL') ) ). 
+
+"REF()"
+BEFORE: 
+DATA: gt_data TYPE TABLE OF sfilight,
+	  gr_data TYPE REF TO data.
+GET REFERENCE OF gt_data INTO gr_data.
+lcl_class=>do_something( gr_data ).
+
+AFTER:
+DATA: gt_data TYPE TABLE OF SFLIGHT.
+lcl_class=>do_something( REF #( gt_data) ).
+
+"CONV()"
+DATA: gv_data TYPE c length 12, 
+	  gv_string TYPE string.
+gv_string = gv_data.
+lcl_class=>do_something( gv_string ).
+AFTER:
+DATA: gv_data type c length 12.
+lcl_class=>do_something( CONV # ( gv_data ) ).
+
+"EXACT"
+DATA: gv_connid TYPE s_conn_id.  "numc 4 
+gv_connid = 'ABCD'.
+WRITE gv_connid.  
+* No error, gv_connid remains initial
+
+DATA: gv_connid TYPE s_conn_id. 
+gv_connid = EXACT #('ABCD').
+WRITE gv_connid.
+* Exception leading to runtime error if not caught.
+
+use EXACT to ensure the value you are assigning to the field fits the target field with no losses.
+if cannot be performed, exception CX_SY_CONVERSION_ERROR is raised.
+ 
+"COND()" - conditional assignments
+BEFORE:
+DATA: gv_kind TYPE abap_typecategory,
+	  gv_kind_lable TYPE string.
+gv_kind = cl_abap_typedescr=>describe_by_name( 'SFLIGHT-CARRID').
+IF gv_kind = cl_abap_typedescr=>kind_elem.
+	gv_kind_label = 'ELEM'.
+ELSE.
+	gv_kind_label = 'NON-ELEM'.
+ENDIF.
+
+AFTER:
+DATA: gv_kind_label TYPE string.
+gv_kind_label = COND #( WHEN cl_abap_typedescr=>describe_by_name( 'SFLIGHT-CARRID')->kind = cl_abap_typedescr=>kind_elem 
+							THEN 'ELEM'
+						ELSE 'NON-ELEM' ).
+You may specify one or more logical expressions in form WHEN <> THEN <>.
+CODN is similiar to IF ELSE ENDIF. 
+
+"SWITCH()" - Conditional Assignments
+DATA gv_kind_lable TYPE string.
+gv_kind_label = SWITCH #( cl_abap_typedescr=>describe_by_name( 'SFLIGHT-CARRID' )->kind  
+						  WHEN cl_abap_typedescr=>kind_elem THEN 'ELEM'
+						  WHEN cl_abap_typedescr=>kind_struct THEN 'STRUCTURE'
+						  ELSE 'SOMETHING ELSE' ).
+SWITCH is similiar to CASE WHEN ENDCASE.
+the result of WHEN or ELSE may raise a class-based exception:
+WHEN x THEN THROW [RESUMABLE] cx_exception ( P1 = a1 P2 = a2 )
+
+*-------------------------------------------------------------------------------*
+* ######## Part 2 Internal Tables  ###########
+*-------------------------------------------------------------------------------*
+*-------------------------------------------------------------------------------*
+* #12 Formmatting dynamic where conditions
+*-------------------------------------------------------------------------------*
+METHODS get_flights IMPORTING iv_carrid TYPE sflight-carrid 
+							  iv_connid TYPE sflight-connid OPTIONAL
+					EXPROTING et_flights TYPE ty_flights.
+DATA: lv_where TYPE string,
+	  ls_flight TYPE sflight.
+CONCATENATE 'carrid = ''' iv_carrid '''' INTO lv_where.
+IF iv_connid IS SUPPLIED.
+	CONCATENAGE lv_where ' and connid = ''' iv_connid '''' INTO lv_where.
+ENDIF.
+
+LOOP AT mt_flihts INTO ls_flight WHERE (lv_where).
+	INSERT ls_flight INTO TABLE et_flights.
+ENDLOOP.
+
+*-------------------------------------------------------------------------------*
+* #13 Defining and Using Secondary Keys
+*-------------------------------------------------------------------------------*
+Read from standard table, the system always scans the table sequentially, as it 
+cannot make any assumptions about a sort order(even if you just sorted the table).
+Sorted tables are always stored with the records sorted by the key fields in ascending
+order. this allows the system to use a binary search. 
+Hashed tables rely on a has algorithm to identify table lines, this method is fast,
+but only works if you can specify the entire table key.
+As of release 7.02, an internal table may have secondary keys. A secondary key may be 
+either sorted or hashed. 
+Hashed secondary keys must be unique.
+Sorted secondary keys may be unique or non-unique. 
+TYPES ty_bookings TYPE SORTED TABLE OF sbook
+		WITH UNIQUE KEY carrid connid fldate bookid
+		WITH NON-UNIQUE SORTED KEY k_agency COMPONENTS agencynum.
+DATA gt_bookings TYPE ty_bookings. 
+
+*Using Secondary keys in loops:
+LOOP AT gt_bookings INTO gs_booking 
+		where agencynum = '00000123'     " this causes syntax warning, you specify the key but not used.
+ENDLOOP.
+should be:
+LOOP AT gt_bookings INTO gs_booking
+		USING KEY k_agency
+		WHERE agencynum = '000000123'.
+ENDLOOP.
+
+*Using Secondary Keys in READ TABLE: 
+TYPES ty_bookings TYPE SORTED TABLE OF sbook
+		WITH UNIQUE KEY carrid connid fldate bookid
+		WITH NON-UNIQUE SORTED KEY k_agency COMPONENTS agencynum customid booked.
+DATA gt_bookings TYPE ty_bookings.
+DATA gs_booking TYPE sbook.
+
+READ TABLE gt_bookings INTO gs_booking
+WITH KEY k_agency
+COMPONENTS agencynum = '00000123'.
+
+when you use read table with secondary keys you must distinguish between the vartiants
+WITH KEY and WITH TABLE KEY.  after WITH TABLE KEY, you must specify the entire secondary key.
+after WITH KEY, you must specify at least a left justified portion of the secondary key.
+
+*Secondary keys and sy-tabix.
+wrong example: 
+READ TABLE itab INTO wa WITH KEY k_key1 COMPONENTS column = value.
+MODIFY itab FROM wa.
+
+right example:
+READ TABLE itab INTO wa WITH KEY k_key1 COMPONENTS column = value.
+MODIFY itab USING KEY k_key1 FROM wa TRANSPORTING col1 ... coln.
+if you read and then subsequently modify a table entry using its index, you must ensure that 
+you specify the same index explicitly in both the READ TABLE and the MODIFY statements. 
+The MODIFY statement must use the TRANSPORTING additon to avoid chaning components belongings 
+to the secondary key. 
+
+*Performance of Unique Secondary Keys
+SELECT * FROM sbook INTO TABLE gt_bookings.        " Key update here 
+LOOP AT gt_bookings INTO gs_booking 
+	USING KEY k_agency WHERE agencynum = '000000123'.
+ENDLOOP.
+
+READ TABLE gt_bookings INTO gs_booking 
+	WITH TABLE KEY carrid = 'LH' connid = '0400'
+					fldate = '20160810' bookid = '00000123'.
+MODIFY TABLE gt_bookings FROM gs_booking.          " Key update here 
+
+LOOP AT gt_bookings INTO gs_bookings USING KEY k_agence
+	WHERE agencynum = '0000000001'.
+ENDLOOP.
+Unique secondary keys are always updated whenever the contents of internal table
+change. 
+*Performance of Non-Unique Secondary Keys
+SELECT * FROM sbook INTO TABLE gt_bookings.  
+LOOP AT gt_bookings INTO gs_booking                    " Key update here 
+	USING KEY k_agency WHERE agencynum = '000000123'.
+ENDLOOP.
+
+READ TABLE gt_bookings INTO gs_booking 
+	WITH TABLE KEY carrid = 'LH' connid = '0400'
+					fldate = '20160810' bookid = '00000123'.
+MODIFY TABLE gt_bookings FROM gs_booking.          
+
+LOOP AT gt_bookings INTO gs_bookings USING KEY k_agence   " Key update here
+	WHERE agencynum = '0000000001'.
+ENDLOOP.
+Non-unique keys are not update immediately. they use "lazy update" that means that
+they are only updated when required for a read operation.
+
+Performance Recommendations
+Avoid unique secondary keys where possible
+Use non-unique sorted keys
+Consider using secondary keys for tables that are filled once and then read frequently.
+
+*-------------------------------------------------------------------------------*
+* #14 Processing internal tables using expressions
+*-------------------------------------------------------------------------------*
+* Reading an internal table with table expression
+Before:
+DATA: gt_flights TYPE TABLE OF sflight,
+	  gs_fligth LIKE LINE OF gt_flights.
+READ TABLE gt_flights INTO gs_flight INDEX 1.
+READ TABLE gt_flights INTO gs_flight WITH KEY carrid = 'LH' connid = '0400'.
+READ TABLE gt_flights INTO gs_flight WITH TABLE KEY fldate COMPONENTS fldate = '20150401'.
+
+After:
+DATA: gt_flights TYPE TABLE OF sflight,
+      gs_flight LIKE LINE OF gt_flights,
+      gv_seatsmax TYPE sflight-seatsmax.
+gs_flight = gt_flights[ 1 ].
+gs_flight = gt_flights[ carrid = 'LH' connid = '0400'].
+gs_flight = gt_flights[ KEY fldate COMPONENTS fldate = '20150401' ].
+gv_seatsmax = gt_flights[ 1 ]-seatsmax. 
+
+Expression do not set SY-SUBRC. if line of the internal table does not exist, the system 
+triggers the exception CX_SY_ITAB_LINE_NOT_FOUND. 
+
+*line_exists and line_index
+Before:
+DATA: gt_flights TYPE TABLE OF sflight,
+	  gs_flight LIKE LINE OF gt_flights.
+READ TABLE gt_flights WITH KEY carrid = 'LH' TRANSPROTING NO FIELDS.
+IF sy-subrc = 0.
+	LOOP AT gt_flights INTO gs_flight FROM sy-tabix.
+		...
+	ENDLOOP.
+ENDIF. 
+
+After:
+DATA: gt_flights TYPE TABLE OF sflight.
+IF lines_exists( gt_flights[ carrid = 'LH']).
+	LOOP AT gt_flights INTO data(gs_flight)
+		FROM line_index( gt_flights[ carrid = 'LH'] ).
+	ENDLOOP.
+ENDIF.
+*-------------------------------------------------------------------------------*
+* #15 MOVE-CORRESPONDING
+*-------------------------------------------------------------------------------*
+TYPES: BEGIN OF gty_custom,
+			customid TYPE sbook-customid,
+	   END OF gty_custom.
+DATA: gt_bookings TYPE TABLE OF sbook,
+	  gt_customers TYPE TABLE OF gty_custom.
+select * FROM sbook INTO TABLE gt_bookings.
+
+MOVE-CORRESPONDING gt_bookings TO gt_customers.  " Move contents from internal table to internal table.
+SORT gt_costomers BY customid.
+DELETE ADJACENT DUPLICATEDS FROM gt_customers COMPARING customid. 
+
+if the target table already contains data, it is deleted. To retain existing data, use addition 
+KEEPING TARGET LINES. 
+if the tables contain further internal tables as components, if you want to assign the components 
+of the nested intertnal tables using MOVE-CORRESPONDING, you must use the addition 
+EXPANDING NESTED TABLES.
+*-------------------------------------------------------------------------------*
+* #15 Create Comprehesions and ReductionsG
+*-------------------------------------------------------------------------------*
+Comprehensions are expressions that return a subset of an internal table without the need for a loop.
+the result set of a comprehension can be a structure or an internal table.
+A simple comprehension
+TYPES: gty_flights TYPE SORTED TABLE OF sflight WITH UNIQUE KEY carrid connid fldate.
+DATA: gt_flights TYPE TABLE OF sflight,
+	  gt_extract LIKE gt_flights,
+	  gs_flight LIKE LINE OF gt_flights.
+LOOP AT gt_flights INTO gs_flight WHERE carrid = 'LH'.
+	APPEND gs_flight TO gt_extract.
+ENDLOOP.
+
+DATA(lh_flights) = VALUE gty_flights( FOR wa IN gt_flights WHERE ( carrid = 'LH' ) ( wa) ).
+The result set is assigned to a target variable using the VALUE constructor expression.
+Within the VALUE() expression, a FOR expression iterates over the source table and the WHERE condition 
+is applied. 
+
+*Reductions are expressions that summarize an internal table without the need for a loop. 
+The result set of a reduction can be a single value, a structure, or an internal table.
+The reduction expresses the calculation. 
+example:
+SELECT * FROM sflight INTO TABLE @DATA(gt_sflight).
+DATA(gv_total) = REDUCE i( INIT i = 0 FOR flight IN gt_sflight NEXT i = i + flight-seatsocc ).
+first i after REDUCE is the type of the result. 
+INIT i : initialization of variables to be used locally in expression for sum. 
+NEXT: calcuation to be performed for each line in the table.
+The above reduction calculates the total number of occupied seats for all entries in the table gt_sflight.
+
+*-------------------------------------------------------------------------------*
+* #16 Groups				
+*-------------------------------------------------------------------------------*
+* Define groups
+LOOP AT gt_flights INTO DATA(flight)
+	 GROUP BY ( airline = flight-carrid 
+	 			flight_no = flight-connid 
+	 			currency = flight-currency 
+	 			size = GROUP SIZE )
+	 ASCENDING ASSIGNING FIELD-SYMBOL(<group>).
+
+ENDLOOP.
+
+you use GROUP BY clause to define the group criteria - here 
+airline, flight no and currency. After the GROUP By, you specify whether the groups should be processed in ascending or descending sort order, and a field symbol to which each group will be assigned.
+
+* Code to be processed for each group
+LOOP....
+	result = VALUE gty_resulttab( BASE result(
+		airline = <group>-airline
+		flight_no = <group>-flight_no
+		currency  = <group>-currency
+		paymentsum = REDUCE s_sum( INIT s = 0 
+								   FOR line in GROUP <group>
+								   NEXT s = s + line-paymentsum )
+	) ).
+ENDLOOP. 
+This example uses the VALUE() opreator to extend an internal table result. The columns airline, flight_no and currency are filled with the key values from the group. Paymentsum, is a reduction that iterates over each line in the current gropu and calculates the sum of the revenues for each flight.
+
+*-------------------------------------------------------------------------------*
+* #16 Defining and Using Meshes				
+*-------------------------------------------------------------------------------*
+A mesh is a special data type whose components are internal table types.
+The types are joined to one another by asscoiations, which described the relationship between the types.
+For example: A table of customer can be associated to a table of flight bookings. 
+The association allows you to loop through the bookings table using criteria related to the customer table.
+This kind of access reduces the need for nested loops.
+
+* Mesh Definition
+TYPES: BEGIN OF MESH gty_mesh,
+		customers TYPE gty_customers ASSOCIATION to_bookings TO bookings ON customerid = id,
+		bookings TYPE gty_bookings,
+	   END OF MESH gty_mesh.
+
+* Mesh - Read Access
+LOOP AT gm_mesh-customers\to_bookings[ gm_mesh-customers[ name = 'SAP AG'] ] INTO DATA(gs_book).
+ENDLOOP.
+A mesh allows you to use the defined association and read the booking table using criteria that are defined in the customer table. The expression takes the customer name and, using the association defined in the mesh, resolves it to the customer number. The customer number is then used to identify the bookings.
+
+*-------------------------------------------------------------------------------*
+* ######## Part 3 Open SQL  ###########
+*-------------------------------------------------------------------------------*
+*-------------------------------------------------------------------------------*
+* #17 Knowing the syntax of new open SQL				
+*-------------------------------------------------------------------------------*
+*variables must be escaped with @ symbol, column lists are now comma-seperated. 
+SELECT carrid, connid, fldate, SUM( paymentsum ), currency 
+	FROM sflight
+	INTO TABLE @gt_flights
+	WHERE fldate > @sy-datum
+	GROUP BY carrid, connid, fldate, currency
+	ORDER BY carrid, connid.
+
+* sequence of clauses changes
+SELECT 
+	FROM sflight 
+	FIELDS carrid, connid, fldate, SUM( paymentsum ), currency
+	WHERE fldate > @sy-datum
+	GROPU BY carrid, connid, fldate, currency
+	ORDER BY carrid, connid
+	INTO TABLE @gt_flights.
+" FROM before the field lists.   > NW 7.50
+" INTO at the very end .  > NW 7.40 
+
+*-------------------------------------------------------------------------------*
+* #18 Using SQL expressions				
+*-------------------------------------------------------------------------------*
+Before: 
+SELECT carrid connid fldate seatsmax seatsocc
+	FROM sflight INTO gs_flight.
+	gs_flight-seatsfree = gs_flight-seatsmax - gs_flight-seatsocc.
+
+	APPEND gs_flight TO gt_flight.
+ENDSELECT.
+
+After: NW7.40
+SELECT carrid, connid, fldate, seatsmax, seatsocc, 
+	   seatsmax - seatsocc AS seatsfree
+FROM sflight
+INTO TABLE @gt_flights.
+
+* Numeric Expressions - Operators and Functions
+Operators:  +,-,*,/
+Numeric Functions: 
+	ABS, CEIL, FLOOR, DIV, MOD (NW 7.40)
+	ROUND (NW 7.50)
+Brackets: "(" and ")" to influence the priority of expressions
+
+* Numeric Expressions - Some definitions and Restrictions
+Integer Operand:
+	Field, variable, or literal of integer type(INT1, INT2, INT, INT8*, b,s, I, int8*) or decimal type(DEC, CURR, QUAN, p) with decimal = 0.
+Decimal Operand:
+	Field, variable or literal of decimal type(DEC, CURR, QUAN, p) with decimal > 0.
+Interger Expression:
+	Only integer operand
+Decimal Expression:
+	At least one decimal operand
+	No operand of type FLTP
+Floating Point Expression:
+	ALL operands of type FLTP
+	Operator "/" only allowed for floating point expressions
+	(Use CAST expression to convert to FLTP if necessary)
+
+example: CAST expression for numeric types
+Before: 
+SELECT carrid connid fldate seatsmax seatsocc 
+	FROM sflight INTO gs_flight1.
+	gs_flight-percentage = gs_flight1-seatsocc / gs_flight1-seatsmax * 100.
+	APPEND gs_fight TO gt_flights.
+ENDSELECT.
+
+After (NW7.40)
+SELECT carrid, connid, fldate, seatsmax, seatsocc, 
+		CAST（ seatsocc AS FLTP ) / 
+		CAST ( seatsmax AS FLTP ) *
+		CAST ( 100 AS FLTP ) AS percentage 
+	FROM sflight
+	INTO TABLE @gt_flights2. 
+" Operator '/' only allwoed in floating point expression, cast all operands(including literal) to type FLTP.
+
+* String Expressions
+Before:
+SELECT id name form 
+	FROM scustom
+	INTO gs_customer1.
+
+	gs_customer1-full_name = gs_customer1-form && ' ' && gs_customer1-name.
+	APPEND gs_customer1 TO gt_customer1.
+ENDSELECT.
+
+After (NW 7.40)
+SELECT id, 
+	   name,
+	   form,
+	   form && ' ' && name AS full_name
+	FROM scustom
+	INTO TABLE @gt_customers2.
+* String expression - operators and functions
+Operators:
+	&& (NW 7.40)
+String Functions (NW 7.50)
+	CONCAT, LPAD, LENGTH, LTRIM, REPLACE, RIGHT, RTRIM, SUBSTRING
+Brackets:
+	"(" and ")" to influence the priority of expressions.
+
+* Different between && and CONCAT
+
+				              Operator &&   |  Function CONCAT
+number of operands:   More than two         |  Exactly 2 operands
+Max length of result: 255 Char              |  1333 char
+Type of operands      only elementary, character-like fields are allowed | Character-like fields, String expressions, String functions
+Handling of trailing blanks: Kept in constants and literal, ingoreed in all other fields. | No special handling
+
+* CAST expression
+Before:
+SELECT ... seatsmax seatsocc 
+	FROM sflight INTO gs_flight ...
+	IF gs_flight-seatsocc > gs_flight-seatsmax. 
+		gs_flight-overbooked = 'X'.
+	ELSE.
+		gs_flight-overbooked = ' '.
+	ENDIF. 
+	APPEND gs_flight TO gt_flights.
+ENDSELECT. 
+
+After( NW 7.40)
+SELECT ... seatsmax, seatsocc
+	CASE WHEN seatsmax > seatsocc THEN 'X'
+		ELSE ' '
+	END AS overbooked
+	FROM sflight INTO TABLE gt_flights. 
+
+*CASE expression - simple or complex
+Simple: similar to CASE WHEN ENDCASE
+	CASE operand 
+		WHEN operand1 THEN result1
+		[WHEN operand2 THEN result2]
+		..
+		[ELSE resultn]
+	END
+Complex: similar to IF ELSEIF ENDIF.
+	CASE WHEN sql_cond1 THEN result1
+		[WHEN sql_cond2 THEN result2]
+		...
+		[ELSE resultn]
+	END
+* CAST distincitions in field list
+*Simple:
+SELECT carrid, connid, fldate, bookid,
+	CASE class
+		WHEN 'Y' THEN 'Economy'
+		WHEN 'C' THEN 'Business'
+		WHEN 'F' THEN 'First'
+		END AS class_txt
+FROM sbook INTO TABLE @gt_bookings.
+*Complex:
+SELECT carrid, connid, fldate,
+	CASE 
+		WHEN seatsocc * 100 < seatsmax * 50 THEN @icon_green_light
+		WHEN seatsocc * 100 < seatsmax * 90 THEN @icon_yellow_light
+		ELSE @icon_red_light
+	END AS icon_occ
+FROM sflight INTO TABLE @gt_flights2.
+
+*-------------------------------------------------------------------------------*
+* #19 Knowing the New Join Possibilities				
+*-------------------------------------------------------------------------------*
+* Right Outer Join
+Before:
+SELECT a~agencynum a~name a~city b~loccurkey 
+	SUM( b~loccuram ) AS paysum
+	FROM sbook AS b LEFT OUTER JOIN starvelag AS a
+							 ON b~agencynum = a~agencynum
+	INTO TABLE gt_agency
+	GROUP BY a~agencynum a~name a~city b~loccurkey
+	ORDER BY a~agencynum b~loccurkey.
+After(NW7.40)
+SELECT a~agencynum, a~name, a~city, b~loccurkey, 
+	SUM( b~loccuram ) AS paysum
+	FROM stravelag AS a RIGHT OUTER JOIN sbook AS b
+						ON a~agencynum = b~agencynum
+	INTO TABLE @gt_agency
+	GROUP BY a~agencynum, a~name, a~city, b~loccurkey
+	ORDER BY a~agencynum, b~loccurkey. 
+
+* UNION to combine results
+Before:
+SELECT agencynum name street city country 
+	FROM stravelag 
+	INTO TABLE gt_partners.
+SELECT id name street city country 
+	FROM scustom
+	APPENDING TABLE gt_partners.
+
+After(NW7.50):
+SELECT agencynum, name, street, city, country
+	FROM stravelag
+UNION
+SELECT id, name, street, city, country 
+	FROM scutom
+	INTO table @gt_partners.
+
+* More Lifted Restrictions for Joins
+SELECT a~carrid, a~carrname, b~loccurkey, t~ktext,
+	SUM( b~loccuram ) AS paysum
+	FROM scarr AS a LEFT OUTER JOIN
+		( sbook AS b LEFT OUT JOIN tcurt AS t
+						ON b~loccurkey = t~waers
+					   AND spras = @sy-langu 
+		)
+		ON a~carrid = b~carrid
+	WHERE b~cancelled <> 'X'
+	OR    b~cancelled IS NULL
+	GROUP BY a~carrid, a~carrname,
+			 b~loccurkey, t~ktext
+	ORDER BY a~carrid
+	INTO TABLE @gt_bookings.
+
+
+*-------------------------------------------------------------------------------*
+* ######## Part 4 CDS Views  ###########
+*-------------------------------------------------------------------------------*
+*-------------------------------------------------------------------------------*
+* #20  Basics of Core Data Services				
+*-------------------------------------------------------------------------------*
+A CDS View is an ABAP Dictionary object with two layers - the SQL view(which is a
+normal database view created using SQL Data Definition Language) and the semantic 
+layer, which remains at Dictionary level. The semantic layer includes information 
+regarding client-handling, buffering, feild labels, and authorization checks. 
+
+Who is Who is CDS: 
+DDL source: New kind of Dictionary object contains definition of SQL view and CDS view entity.
+SQL view: Representation on database Syntax partly similar to SQL.
+CDS view Entity: Carries more semantic can be consumed by (New) Open SQL. 
+
+example: A simple Projection(映射)
+@AbapCatalog.sqlViewName: 'D750AW_CONN'           "  name of the SQL view 
+define view D750AW_Connection as select carrid,     " name of CDS view entity
+										connid,     " field list, comma seprerated. 
+										cityfrom,
+										cityto
+								from spfli
+The simplest form of a CDS view is a projection - that is, a selection of fields from a single table. 
+The language used is SQL DDL.
+The name of CDS view entity is specified after the DEFINE VIEW statement. It is recommended,
+though not technically neccessary, that the name of DDL source and the name of CDS view are identical.
+The name of SQL view it specified after the Annotation.
+@ABAPCatalog.sqlViewName.It has to be different from the name of CDS entity. Like for any Dictionary view,
+the maximum length is 16 characters. 
+
+example2 - Inner Join with selection
+@AbapCatalog.sqlViewName: 'D750AW_CONNCARR'
+define view D750aw_Connection_Carrier as select 
+	from spfli as c inner join scarr as a
+		on c.carrid = a.carrid
+		{
+			c.carrid,
+			c.connid,
+			a.carrname,
+			a.currcode as currency,
+			c.cityfrom,
+			c.cityto
+		}
+		where c.fltype <> 'X'.  // exclude charter flights 
+No client handling needed in join condition and where condition, comments are marked with //
+The syntax for defining a join in a DDL Source is exactly as in Open SQL. 
+Like in Open SQL client-handling will be done implicitly by the framework. 
+Comments can be added after "//".
+
+*-------------------------------------------------------------------------------*
+* #21  Using Annotations				
+*-------------------------------------------------------------------------------*
+Core Data Services - Annotations(标注）:
+	- Begin with @	
+	- Enrich the view definition with semantic information   (semantic - 语义的)
+	- Are properties of the CDS view entity, not of the underlying database view. 
+	- Can be mandatory (e.g. @AbapCatalog.sqlViewName)
+	- Can specify technical properties (e.g. client-dependency, buffering)
+	- Or semantical aspects(e.g., currency fields, end user labels)
+	- May be related to specific frameworks that are built on top of CDS(e.g., OData, SAP UI5)
+	- May be user-defined
+
+Example 1 - Some Basic Annotations 
+@AbapCatalog.sqlViewName: 'D750AW_CARR'       
+@ClientDependent: true             // Switch on/off implicit client handling(optional)
+
+@AbapCatalog.Buffering.type: #FULL
+@AbapCatalog.Buffering.status: #ACTIVE   // settings for SAP table buffering
+
+@EndUserText.label: 'Carrier Details'    // Short Description for the view
+
+define view D750aw_Carrier as select 
+	from scarr
+	{
+		@<EndUserText.label: 'Carrier ID',        //Short description before field name carrid
+		carrid,
+		carrname
+		@<EndUserText.label: 'Carrier Name'       //Short description after field name carrname
+	}
+
+Annotations can be related to the view as a whole or to an individual field.
+View related annotations, you have to place before the view defintiion.
+Field related annotations you have to place inside the field lists, either before the field name or 
+immediately after the field name. Field related annotations after the field name begin with @< instead of @.
+
+Example 2 - Some Framework-Specific Annotations
+@AbapCatalog.sqlViewName: 'D750AW_FLI_ANNB'
+@Analytics.query: true                      // View defines the basis for a query
+@OData.publish:true                         //OData Service is generated for this view
+@AccessControl.authorizationCheck: #CHECK
+@EndUserText.label: 'Available Flights'
+@VDM.viewType: #CONSUMPTION                  //Classification in Virtual Data Model
+define view D750aw_Flight_AnnotationsB as select 
+			from D750aw_Flight_AnnotationsA
+			{
+				@AnalyticsDetails.query.axis: #ROWS    // ROWS and COLUMNS in generated query
+				carrid,
+				@AnalyticsDetails.query.axis: #ROWS
+				connid,
+				@AnalyticsDetails.query.axis: #ROWS
+				fldate,
+				seatsmax,
+				@DefaultAggregation: #SUM
+				@AnalyticsDetails.query.axis: #COLUMNS
+				seatsocc
+			}
+
+
+*-------------------------------------------------------------------------------*
+* #22  Using Expressions and Functions				
+*-------------------------------------------------------------------------------*
+* Example 1 - Arithmetic Expression and Case
+@AbapCatalog.sqlViewName: 'D750AW_FLI_EXPR'
+define view D750aw_Flight_Expressions as select 
+	from sflight 
+	{
+		carrid,
+		connid,
+		fldate,
+		seatsmax,
+		seatsmax - seatsocc as seatsfree,               //Arithmetic expression
+		case when seatsocc > seatsmax then 'X'          //complext case distinction 
+			 else ' '
+		end as overbooked
+	}
+
+* Example 2 - Unit Conversion and Type Casting
+@AbapCatalog.sqlViewName: 'D750AW_CONN_CONV'
+define view D750AW_Connection_Convertion as select 
+	from spfli 
+	{
+		carrid,
+		connid,
+		cityfrom,
+		cityto,
+		distance @<Semantics.quantity.unitOfMeasure: 'DISTID',     //annotations to identify units and measures
+		distid @<Semantics.unitOfMeasure:true,
+		Unit_Conversion( quantity => distance,
+						 source_unit => distid,                     // Operator => to assign parmeters 
+						 target_unit => cast('MI' as abap.unit)     //Casting of literal into compatible type UNIT 
+						)
+		as miles
+	}
+
+* Example 3 - Calculation with Dates (NW7.50)
+@AbapCatalog.sqlViewName: 'D750AW_BOOK_DAYS'
+define view D750aw_Booking_Days as select 
+	from sbook
+	{
+		carrid,
+		connid,
+		fldate,
+		bookid,
+		dats_days_between(order_date, fldate) as days_ahead,  // 'Subtract' two fields of type DATE 算两个日期间天数
+		dats_add_days( order_date, 14, 'FAIL' ) as due_date   // 'Add' an integer to a field of type DATE, 
+															  // 'FAIL' what should happen in case of an error, raise exception
+	}
+
+* Example 4 - CDS View with input parameters
+@AbapCatalog.sqlViewName: 'D750AW_BOOK_PARA'
+define view D750aw_Booking_PARAMETER
+	with parameters p_days : abap.int4
+	as select from sbook
+	{
+		carrid,
+		connid,
+		fldate,
+		bookid,
+		dates_add_days( order_date, :p_days, 'FAIL' ) as due_date,
+		dats_days_between(order_date, fldate) as days_ahead
+	}
+Open SQL: select from CDS view with parameter
+SELECT * FROM d750aw_booking_parameter( p_days = @pa_days )
+	into table @gt_bookings2
+	where fldate < @sy-datum
+	and due_date > @sy-datum.
+
+*-------------------------------------------------------------------------------*
+* #23  Formulating Advanced Joins and Associations 				
+*-------------------------------------------------------------------------------*
+Example 1 - Right Outer Join
+@AbapCatalog.sqlViewName: 'D750AW_AG_RIGHT'
+define view D750aw_Agency_Right_Join
+	as select from stravelag as a right outer join sbook as b
+	on a.agencynum = b.agencynum
+	{
+		a.agencynum,
+		a.name,
+		a.city,
+		a.country,
+		b.loccurkey,
+		sum( b.loccuram ) as paysum
+	}
+	where b.cancelled <> 'X' or b.cancelled is null
+	group by a.agencynum,
+			 a.name,
+			 a.city,
+			 a.country,
+			 b.loccurkey
+
+* Example 2 - Union
+@AbapCatalog.sqlViewName: 'D750AW_PARTUNI'
+define view D750aw_Partner_Union
+	as select from stravelag
+		{
+			agencynum as id,
+			'A' as type,
+			name,
+			city,
+			country
+		}
+	union
+	select from scustom
+		{
+			id as id,
+			'C' as type,
+			name,
+			city,
+			country
+		}
+
+* Example 3 - Ad hoc Association (Replacement for Join)
+Classic: join
+@AbapCatalog.sqlViewName: 'D750AW_CARR_JOIN'
+define view D750aw_Carrier_Join as select from scarr as a 
+			left outer join tcurt as t 
+			on a.currcode = t.waers
+			and t.spras = 'E'
+			{
+				a.carrid,
+				a.carrname,
+				a.currcode,
+				t.spras,
+				t.ktext
+			}
+New Syntax: Association 
+@AbapCatalog.sqlViewName: 'D750AW_CARR_ASSO'
+define view D750AW_Carrier_Assoc as select from scarr as a 
+			association[1] to tcurt as t
+			on a.currcode = t.waers
+			and t.spras = 'E'
+			{
+				a.carrid,
+				a.carrname,
+				a.currcode,
+				t.spras,
+				t.ktext
+			}
+Advanced of Associations 
+Classic Join condition: 
+No cardinality, only the fields in the field list are visible, join is always evaludated(i.e. all tables are accessed)
+Association:
+You may specify a cardinality, 
+Associated table can be exposed as a whole
+Association is only evaluated if you actually read from the associated table
+Filtered Associations
+
+* Example 4 - Exposed Association 
+@AbapCatalog.sqlViewName: 'D750AW_BOOK_ASSO'
+define view D750aw_Booking_Association as select from sbook as b
+				association [1] to scustom as customer    //Providing a name for the association 
+				on b.customid = customer.id
+				association [0..1] to stravelag as a      
+				on b.agencynum = a.agencynum
+				{
+					b.carrid,
+					b.connid,
+					b.fldate,
+					b.bookid,
+					b.customid,                         // Prerequisite: field list contains all fields used in ON condition
+					b.agencynum,
+					customer,                           // Association name(or alias) made visible to user of the view
+					a as agency 
+				}
+* Using an Exposed Assocaition 
+in other CDS views:
+@AbapCatalog.sqlViewName: 'D750AW_BOOK_USEA'
+define view D750aw_Booking_Use_Association as 
+select from D750aw_Booking_Associatoin as b
+{
+	b.bookid,
+	b.customer.name as custname,
+	b.agency.name as agencyname
+}
+
+* Example 5 - Association with Filter
+@AbapCatalog.sqlViewName: 'D750AW_CARR_FILT'
+define view D750aw_Carrier_Filtered_Assoc as 
+	select from scarr as a
+		association [0..1] to tcurt as t
+			on a.currcode = t.waers
+			{
+				a.carrid,
+				a.carrname,
+				a.currcode,
+				t[spras = 'E'].ktext as text_EN,
+				t[spras = 'D'].ktext as text_DE
+			} 
+
+*-------------------------------------------------------------------------------*
+* ######## Part 5 ABAP Channels  ###########
+*-------------------------------------------------------------------------------*
+*-------------------------------------------------------------------------------*
+* #24  ABAP Messaging Channels 				
+*-------------------------------------------------------------------------------*
+Sharing data between programs in ABAP has conventionally been restricted to programs
+running on the same application server. These programs can use shared memory (shared objects)
+to store and retrieve data. However, communication betwen servers within the same system is 
+not possible in this way, because shared memory is specific to a signle application server.
+
+*Communication Between Programs Across Server Boundaries
+ABAP Messaging Channels(AMC) are capable of exchaning messages across server boundaries.
+Coupled with ABAP Push Channels(APC), they can also be used to facilitate communciation with 
+external applicatoins via web socket communication (for example, to push information to a SAP UI5 application.)
+
+* ABAP Messaging Channel Definition
+Tcode SAMC
+This is a Repository object that describes the attributes of the AMC. An ABAP Messaging Channel can actually contain
+more than one channel via which messages can be sent. You also define the type of message that will be sent(text, binary data, or ABAP Push Channel Protocol).
+Scope: System/Client/User Session.
+Attributes for Authorized Program: Whitelist of authorized programs 
+
+* Sending Messages
+Prerequistie: The sendder is registered as a sender in the channel definition
+data: go_producer TYPE REF TO if_amc_message_producer_text.
+
+go_producer ?= cl_amc_channel_manager=>create_message_producer(
+				i_application_id = 'WDE740'
+				i_channel_id     = '/mssage' ) 
+)
+.
+go_producer->send('Message in a bottle').
+
+A program that wants to send a message using AMC must be a registered sender in the channel definition.
+The method create_message_producer() of class cl_amc_channel_manager returns an instance of a message-producing class.
+In this case, the returning parameter is cast onto the type if_amc_message_producer_text because the channel is defined to 
+exchange text messages. There are also interfaces with the suffixes_binary and _pcp for binary and push channel protocol 
+communication respectively.
+
+* Timeline for receiving Messages
+
+Create consumer object
+Register to receive messages
+Poll for messages      - Sent mssages are placed in a "mailbox" and can be collected periodically
+De-register message reception
+
+* Getting Consumer Object
+DATA go_consumer TYPE REF TO if_amc_message_consumer.
+go_consumer = cl_amc_channel_manager=>create_message_consumer(
+				i_application_id = 'WDE740'
+				i_channel_id     = '/message'
+).
+
+* The receiver Object. 
+A Sample Receiver Class
+
+CLASS lcl_receiver DEFINITION.
+	PUBLIC SECTION.
+		INTERFACES if_amc_message_receiver_text.
+		EVENTS message_received EXPORTING VALUE(ev_message)
+										  TYPE string.
+ENDCLASS.
+CLASS lcl_receiver IMPLEMENTATION.
+	METHOD if_amc_message_receiver_text~receive.
+		RAISE EVENT message_received
+			  EXPORTING ev_message = i_message. 
+	ENDMETHOD.
+ENDCLASS.
+* Listening to the Messaging Channel
+DATA go_receiver TYPE REF TO lcl_receiver.
+CREATE OBJECT go_receiver.
+go_consumer->start_message_delivery(go_receiver).
+
+* Collecting Messages
+WAIT FOR MESSAGING CHANNELS UNTIL <condition> UP TO <n> SECONDS. 
+i.e. * wait until a message is received but not longer than waiting time in seconds
+ WAIT FOR MESSAGING CHANNELS UNTIL lines( gt_message_list ) >= 1 UP TO 60 SECONDS.  " when there is a message received within 60 sec then ...
+
+Message arrives -> RECEIVE() method of receiver class is processed->Recommendation - RECEIVE() method 
+triggers event to pass message to processing class.
+
+* Receiving Messages
+->Application class uses WAIT FOR MESSAGING CHANNELS. The condition checks that a flag message_arrived is not initial.
+->RECEIVE method is called and triggers an event, passing the new message 
+->APPLICATION class handles the event, receives the message, and sets the message_arrived flag to 'X'. 
+->Directly after WAIT FOR MESSAGING CHANNELS, the application class sets message_arrived back to SPACE. 
+
+Example codes: (Sender)
+REPORT yrs_amc_send_message_text.
+PARAMETERS: message TYPE string LOWER CASE DEFAULT 'hi there !'.
+DATA: lo_producer_text TYPE REF TO if_amc_message_producer_text.
+DATA: lx_amc_error       TYPE REF TO cx_amc_error.
+
+TRY.
+    lo_producer_text ?= cl_amc_channel_manager=>create_message_producer( i_application_id = 'YAMC_TEST' i_channel_id = '/ping' ).
+
+
+    " send message to the amc channel
+    lo_producer_text->send( i_message = message ).
+
+  CATCH cx_amc_error INTO lx_amc_error.
+    MESSAGE lx_amc_error->get_text( ) TYPE 'E'.
+ENDTRY.
+
+Example codes (Receiver)
+REPORT yrs_amc_receive_message_text.
+PARAMETERS: msg_nr   TYPE i DEFAULT 1, "number of expected messages
+            wait_sec TYPE i DEFAULT 20. "waiting time to
+
+DATA: lo_consumer       TYPE REF TO if_amc_message_consumer.
+DATA: gt_message_list TYPE TABLE OF string.
+DATA: lv_message          TYPE string.
+DATA: lx_amc_error         TYPE REF TO cx_amc_error.
+
+* implemenation class for AMC receiver interface
+CLASS lcl_amc_test_text DEFINITION
+FINAL
+  CREATE PUBLIC .
+  PUBLIC SECTION.
+* interface for AMC messages of type TEXT
+    INTERFACES if_amc_message_receiver_text .
+ENDCLASS.
+
+* Consumer test for ABAP Messaging Channel YAMC_TEST”
+CLASS lcl_amc_test_text IMPLEMENTATION.
+  METHOD if_amc_message_receiver_text~receive.
+*
+* remark: in this method should the message be received and  the main actions
+* should be processed in the main program and  usually after WAIT statement.
+* Any kind of communication, e.g. RFCs, HTTP and message hanlding,
+
+* e.g. error message is not supported and  will lead to ABAP dump.
+*
+
+* insert received messages into the global table
+    APPEND i_message TO gt_message_list.
+  ENDMETHOD.
+ENDCLASS.
+
+START-OF-SELECTION.
+  DATA: lo_receiver_text TYPE REF TO lcl_amc_test_text.
+
+  TRY.
+      lo_consumer = cl_amc_channel_manager=>create_message_consumer( i_application_id = 'YAMC_TEST' i_channel_id = '/ping' ).
+      CREATE OBJECT lo_receiver_text.
+
+      " start of message delivery
+      lo_consumer->start_message_delivery( i_receiver = lo_receiver_text ).
+    CATCH cx_amc_error INTO lx_amc_error.
+      MESSAGE lx_amc_error->get_text( ) TYPE 'E'.
+  ENDTRY.
+
+*
+* wait until a message is received but not longer than waiting time in seconds
+*
+  WAIT FOR MESSAGING CHANNELS UNTIL lines( gt_message_list ) >= msg_nr UP TO wait_sec SECONDS.
+
+  IF sy-subrc = 8 AND  lines( gt_message_list ) = 0.
+    WRITE: ')-: Time out occured and no MESSAGE received :-('.
+  ELSE.
+    LOOP AT gt_message_list INTO lv_message.
+* print out the list of received AMC messages
+      WRITE: / sy-tabix, lv_message.
+    ENDLOOP.
+  ENDIF.
+
+*-------------------------------------------------------------------------------*
+* #25  ABAP Push Channels 				
+*-------------------------------------------------------------------------------*
+ABAP Push Channels build on the principle of ABAP Messaging Channels, but allow an ABAP program
+to push a message to a web page. This uses the Web Socket protocol and the message is published 
+to the receiver as an event. This allows web applications to receive notifications from the ABAP
+back-end system without polling. 
+Furthermore, a web application can send a message to the ABAP server, which can then be broadcast 
+system-wide using ABAP Messaging Channels. 
+
+* ABAP Push Channel Definition
+ICF Service                               ABAP Class
+
+URL                                       ON_ACCEPT
+Authentication      ABAP Push Channel     ON_START
+										  ON_MESSAGE
+										  ON_ERROR
+										  ON_CLOSE
+The definition of an ABAP Push Channel is a standalone repository object that links an 
+Internet Communication Framework(ICF) service with an ABAP class. A client program uses ICF service 
+to initiate communication. The generated ABAP class contains methods, of which at least ON_START and 
+ON_MESSAGE must be redefined(alghough they may remain empty).
+The ICF service contains authentication information for logging onto the system.Here you can store the 
+logon information of a system user(type S). 
+When communication is first established with the system, the generated method ON_START of the corresponding 
+ABAP class is called. Whenever an inbound message is received, the method ON_MESSAGE is called. 
+To configure the push mechanism, you must link the ABAP Push Channel with an ABAP Messaging Channel. 
+In the AMC definition, the ABAP Push Channel is registered to Receive via APC Web Socket. 
+
+*Initiating Communication From JavaScript 
+<script type = "text/javascript">
+	function connect(){
+		ws = new WebSocket("ws://twdf3902.wdf.sap.corp:8000/sap/bc/apc/sap/zwde740apc");
+		ws.onmessage = function(event){
+			window.alert("message arrived"); 
+		}
+	}
+</script>
+The address of the web socket is that of ABAP Push Channel. you use the HTTP port of the server to open the 
+communication - the protocol is switched as part of the initiation. 
+
+* Configuring Communication in ABAP. 
+HTTP Request -> Create/Change Service-> calls -> ABAP class method (registed in AMC)
+
+* ABAP Coding to Bind to the AMC
+METHOD if_apc_wsp_extension~on_start.
+	DATA lo_manager TYPE REF TO if_apc_wsp_binding_manager.
+
+	lo_manager = i_context->get_binding_manager( ).
+	lo_manager->bind_amc_message_consumer(
+		EXPORTING 
+			i_application_id = 'ZWDE740'
+			i_channel_id     = '/mssages'
+	). 
+
+ENDMETHOD.
+if an extenal application is to receive messages via the ABAP Push Channel, you need to bind it to an
+ABAP Messaging Channel. This registers the application as a consumer of the corresponding AMC. 
+Bott the ON_START and ON_MESSAGE methods have an importing parameter i_context, which allows you 
+to get a reference to the binding manager. Using this instance, you can register the APC as an AMC consumer. 
+
+*-------------------------------------------------------------------------------*
+* ######## Part 6 New Analysis Tools  ###########
+*-------------------------------------------------------------------------------*
+*-------------------------------------------------------------------------------*
+* #26  Using the ABAP Trace 				
+*-------------------------------------------------------------------------------*
+Before: 
+Runtime analysis: SE30. 
+
+After (NW7.02)
+ABAP Trace Tool(Transaction SAT) with 
+	Modern and flexible user interface
+	Easy navigation betwen tools
+	Profile tool to find package, program that consumes the most runtime
+	Call stack display
+	Processing blocks tool to get an aggregated view of the program flow
+	Diff tools to compare two hit lists and call hierarchies
+	Trace file persistency on database
+* Executing an ABAP Trace (SAT)
+	create a variant to specify exactly what is to be traced.
+* Define a variant
+	Restrict trace to certain program parts
+	Restrict trace to certain statements
+	Summarize repeated calls of processing block
+
+*-------------------------------------------------------------------------------*
+* #27  Using the ABAP Test Cockpit 				
+*-------------------------------------------------------------------------------*
+ABAP Test Cockpit (ATC):
+	Adminstrative functions:
+		Run on transport release
+		Prevent transport release if Category 1
+		errors occur
+		Schedule central checks
+		Distribute results by mail
+		Grant exemptions to rules in exceptional cases
+		"Code Inspector Inside"
+
+ATC Configuration:
+The main settings specify whether the checks should be started when a user attempts to release 
+a transport request and what should happen in case of errors. You can also specify whether it 
+should be possible to apply for an exemption to a particular error.
+"Once you have created a configuration, you can schedule it to run in the background.
+
+Manage ATC Results: 
+Results visible in ATC Result Browser (SE80). You can activate the finish results. This makes them
+visible in the ATC Result Browser which is integrated into SE80.
+
+Exemption Workflow - Application
+There are cases where, in general, a particular programming technique is forbidden but required in 
+exceptional circumstances. Examples for this might be the use of INSERT REPORT or client-specific SELECT.
+When this happens, you can grant exemptions for particular programs.
+In order to exemptions to be granted, you must first specify in transaction ATC that exemptions are to be allowed.
+You must also enter the name of at least one approver. Note that an approver may not approve his or her own 
+exemptions(double verification principle!).
+When a user applies for an exemption, they must give a reason for doing so. Approvers can generate a worklist 
+of applications that they are to review using transaction ATC. They can grant or deny each exception, or return 
+the application to the submitter to obtain further information.
+
+*-------------------------------------------------------------------------------*
+* #28  Using the SQL Monitor 				
+*-------------------------------------------------------------------------------*
+Existing Analysis Tools:
+Development System: Code Inspector, ABAP Trace, SQL trace. 
+Production System: No chance to analyze real-life situation. 
+
+SQL Monitor Tool ( after NW7.40)
+The SQL Monitor tool, new in Release 7.40, allows you to log SQL statements in your production system 
+and analyze them in the development system along with your Code Inspector results. 
+
+Start the Data Collection: 
+Transaction SQLM in Production/Preproduction System
+On the initial screen, you can specify whether to collect data from one application server or from all servers.
+When you switch on the data collection, you are prompted to enter an expiry date. By default, this is exactly 
+one week in the future. Collecting data over this period allows you to even out day-to-day peaks and troughs 
+in system usage and aslo to take weekly jobs into account. 
+The data is collected at kernel level. This minimizes the performance overhead required for the collection. 
+During the collection period, an automatically-scheduled background job retrieves the data on an hourly basis
+and stores it in the database. You can access this data at any time during the collection processes. 
+
+Evaluation the Data
+At any time during or after the data collection(but not during the first hour, as the first replication from the 
+kernel to the database will not yet have taken place) you can start to evaluate it. Restrict data volume by package,
+object name,object type using a snapshot.
+
+There are two ways to retrieve a snapshot from the production system - by RFC or by file upload/download.
+To start the retrieval, use transaction SWLT in development system. 
+Here you will need either to provide a snapshot or to generate a new one. If you have an RFC connection from 
+the development to the production system, you can use it to generate the snapshot from here. However, this is often 
+not possible due to security considerations, you can also import a snapshot from a file. 
+The files must first be exported from the production system using transaction SQLM. 
+
+Worklist Analysis - Transaction SWLT 
+As well as the snapshot, you can integrate the results of a global code inspector inspection. In this case, you will 
+see the SQL statements in the analysis and, if there is a corresponding message from the code inspector, it will appear
+next to the statement in the display. 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
