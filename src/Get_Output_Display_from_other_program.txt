@@ -1,0 +1,169 @@
+REPORT ZEMAIL_EXCEL_DYNAMIC.
+
+" by: John Eswin Nizar 
+
+CONSTANTS: c_tab      TYPE c VALUE cl_abap_char_utilities=>horizontal_tab,
+           c_cret     TYPE c VALUE cl_abap_char_utilities=>cr_lf,
+           c_mimetype TYPE char64 VALUE 'APPLICATION/MSEXCEL;charset=utf-16le'.
+DATA: v_xattach        TYPE xstring, it_binary_attach TYPE solix_tab.
+*---------------------------------------------------------------------------------* Convert the internal data to XString*----------------------------------------------------------------------------------
+DATA: lc_descr_ref TYPE REF TO cl_abap_structdescr,
+      lv_value     TYPE char128, lv_temp TYPE string,
+      lv_mid       TYPE string, lv_mid2 TYPE string,
+      lv_tabix     TYPE sy-tabix.FIELD-SYMBOLS: <fs_intable> TYPE any.
+FIELD-SYMBOLS: <intable_wa> TYPE abap_compdescr.
+
+TABLES: mara.
+
+DATA:
+  rspar         TYPE TABLE OF rsparams,
+  wa_rspar      LIKE LINE OF rspar,
+  lt_data_ref   TYPE REF TO data,
+  go_salv_table TYPE REF TO cl_salv_table.
+
+FIELD-SYMBOLS: <fs_table> TYPE STANDARD TABLE.
+
+data : lv_pgmna type TSTC-PGMNA.
+
+SELECTION-SCREEN BEGIN OF BLOCK BL1 WITH FRAME TITLE TEXT-001.
+PARAMETERS : p_tcode(20) TYPE C.
+PARAMETERS : p_var(10) TYPE C OBLIGATORY.
+SELECTION-SCREEN END OF BLOCK BL1.
+
+SELECTION-SCREEN BEGIN OF BLOCK BL2 WITH FRAME TITLE TEXT-002.
+PARAMETER : P_PVW RADIOBUTTON GROUP GR1 DEFAULT 'X',
+P_EML RADIOBUTTON GROUP GR1.
+SELECTION-SCREEN END OF BLOCK BL2.
+
+select single pgmna into lv_pgmna from tstc where tcode eq p_tcode.
+
+cl_salv_bs_runtime_info=>set(
+    display        = abap_false
+    metadata       = abap_false
+    data           = abap_true ).
+
+SUBMIT (lv_pgmna) USING SELECTION-SET p_var AND RETURN.
+
+TRY.
+    cl_salv_bs_runtime_info=>get_data_ref(
+      IMPORTING
+        r_data            = lt_data_ref ).
+  CATCH cx_salv_bs_sc_runtime_info.
+    MESSAGE 'Data retrieval error' TYPE 'E'.
+ENDTRY.
+
+cl_salv_bs_runtime_info=>clear_all( ).
+ASSIGN lt_data_ref->* TO <fs_table>.
+
+DATA : gr_table TYPE REF TO cl_salv_table,
+       lv_xml_type TYPE salv_bs_constant,
+       lv_xml TYPE xstring,
+       gt_outtab TYPE STANDARD TABLE OF sflight,
+       lv_smtpadr TYPE ad_smtpadr.
+
+TRY.
+   cl_salv_table=>factory(
+     IMPORTING
+       r_salv_table = gr_table
+     CHANGING
+       t_table  = <fs_table> ).
+ CATCH cx_salv_msg.
+ENDTRY.
+
+DATA : lr_functions TYPE REF TO cl_salv_functions_list,
+       lr_layout TYPE REF TO cl_salv_layout,
+       ls_key TYPE salv_s_layout_key.
+
+lr_functions = gr_table->get_functions( ).
+*... #3.1 activate ALV generic Functions
+lr_functions->set_all( abap_true ).
+
+lr_layout = gr_table->get_layout( ).
+
+*... $4.1 set the Layout Key
+ls_key-report = sy-repid.
+lr_layout->set_key( ls_key ).
+
+*... #4.3 set Layout save restrictions
+lr_layout->set_save_restriction( if_salv_c_layout=>restrict_user_independant ).
+
+*... Top of List, End of List
+DATA: lr_content TYPE REF TO cl_salv_form_element.
+
+IF P_PVW EQ 'X'.
+*" Call to Convert ALV Output as internal XML Format
+  gr_table->display( ).
+ELSE.
+***--  Convert the output the internal XML format
+lv_xml_type = if_salv_bs_xml=>c_type_mhtml.
+lv_xml      = gr_table->to_xml( xml_type = lv_xml_type ).
+
+*" Email Data Declaration
+***-- BCS data
+DATA : send_request   TYPE REF TO cl_bcs,
+       main_text      TYPE bcsy_text,
+       document       TYPE REF TO cl_document_bcs,
+       recipient      TYPE REF TO if_recipient_bcs,
+       bcs_exception  TYPE REF TO cx_bcs,
+       sent_to_all    TYPE os_boolean,
+       xls_content    TYPE solix_tab,
+       lp_xls_size    TYPE so_obj_len.
+
+
+" Email - Content Conversion / Body / Attachment Creation
+TRY.
+*  " ------ Create persistent send request -----------
+     send_request = cl_bcs=>create_persistent( ).
+
+* " ------------ add document --------------------
+* get xls xstring and convert it to BCS format
+
+  lp_xls_size = xstrlen( lv_xml ).
+
+  xls_content = cl_document_bcs=>xstring_to_solix( ip_xstring = lv_xml ).
+
+APPEND 'TestAttachment' TO main_text.
+document = cl_document_bcs=>create_document(
+     i_type  = 'RAW'
+     i_text  = main_text
+     i_subject = 'Test ExcelAttachment' ).
+
+document->add_attachment(
+        i_attachment_type  = 'xls'
+        i_attachment_subject = 'ExampleSpeadSheet'
+        i_attachment_size  = lp_xls_size
+        i_att_content_hex  = xls_content ).
+
+" add document to send request
+  send_request->set_document( document ).
+
+" Send E-Mail
+   DATA l_c_address TYPE ad_smtpadr.
+"  ----- add recipient (e-mail address) -------------
+*   LOOP AT s_email.
+     l_c_address = 'example@domain.com'. " s_email-low.
+     recipient = cl_cam_address_bcs=>create_internet_address(
+           i_address_string = l_c_address ).
+
+"  add recipient to send request
+    send_request->add_recipient( i_recipient = recipient ).
+*   ENDLOOP.
+
+"  ------------  send document ------------------
+   sent_to_all = send_request->send( i_with_error_screen = 'X' ).
+
+   IF sent_to_all = 'X'.
+     MESSAGE i022(so).
+   ENDIF.
+
+   COMMIT WORK.
+
+" ---------------------------------------
+" * exception handling
+   CATCH cx_bcs INTO bcs_exception.
+     WRITE : text-001.
+     WRITE : text-002, bcs_exception->error_type.
+     EXIT.
+
+ENDTRY.
+ENDIF.

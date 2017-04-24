@@ -1,0 +1,42 @@
+types T_LONG_INT(16) type P decimals 0.
+data: NUMBER         type T_LONG_INT,
+      RESULT         type STRING.
+ 
+NUMBER = '4035756095'.
+perform CONVERT_BASE10_TO_BASE16 using    NUMBER
+                                 changing RESULT.
+write: / NUMBER, '-->', RESULT.
+ 
+form CONVERT_BASE10_TO_BASE16 using    NUMBER type T_LONG_INT
+                              changing RESULT type STRING.
+ 
+  data:
+    REST  type T_LONG_INT,
+    DIGIT type c.
+ 
+  REST = NUMBER mod 16.
+  case REST.
+    when 0 or 1 or 2 or 3 or 4 or 5 or 6 or 7 or 8 or 9.
+      write REST to DIGIT left-justified no-sign.
+    when 10.
+      DIGIT = 'A'.
+    when 11.
+      DIGIT = 'B'.
+    when 12.
+      DIGIT = 'C'.
+    when 13.
+      DIGIT = 'D'.
+    when 14.
+      DIGIT = 'E'.
+    when 15.
+      DIGIT = 'F'.
+  endcase.
+  concatenate digit RESULT into RESULT.
+ 
+  REST = NUMBER div 16.
+  if REST > 0.
+    perform CONVERT_BASE10_TO_BASE16 using    REST
+                                     changing RESULT.
+  endif.
+ 
+endform.                    "convert_base10_to_base16
