@@ -1,0 +1,160 @@
+	
+			
+Table of Contents
+1	Create Inbound Service	6
+1.1	Introduction	6
+1.2	Details and Execution	6
+1.2.1	Create New Service	6
+1.2.2	Active Service Class	8
+1.2.3	DB Table update	9
+1.2.4	Update the Mapping	10
+1.2.5	Create Binding in SOA Manager	10
+2	Update Inbound Service	11
+2.1	Introduction	11
+2.2	Details and Execution	11
+2.2.1	Service update	11
+2.2.2	DB Table update	13
+2.2.3	Mapping Update	13
+2.2.4	Export the updated WSDL	13
+3	Consume Outbound Service	14
+3.1	Introduction	14
+3.2	Details and Execution	14
+3.2.1	Create Consumer Service	14
+3.2.2	Update Consumer Service	15
+3.2.3	Update the Mapping	15
+3.2.4	Create Logical Port in SOA Manager	16
+4	Update SOA Manager	17
+4.1	Introduction	17
+4.2	Details and Execution	17
+4.2.1	Create Inbound Binding	17
+4.2.2	 Create Outbound Logical Port	19
+
+ 
+1	Create Inbound Service
+T-code: sproxy
+1.1	Introduction
+Use
+Create the Inbound Service, 
+1.2	Details and Execution
+1.2.1	Create New Service 
+1. In the Services Browser, click 'New' button, and choose 'Service Provider' option
+Choose 'Backend' in the Next screen, and in the Next QName screen, input the service name and namespace 'http://acea.idex '
+
+
+In the Next Transport screen, input Package Name ' /ACIDX/IDE ' and Prefix ' /ACIDX/'.
+In the Next Finish screen, click Finish button to create the service
+2. In the service screen, go to 'External View' tab, choose the service and right click 'Add Operation' to create Method
+3. In the Method, create the input/output strcture fields:
+1# Create Message Type: In the Method, right click 'Set Request' and choose 'Create New Message Type', input the Message Type name ( Usually, Service Name + ReqMsgType / RespMsgType) , 
+2# Create Root Data Type: In the message type, right click 'Refered Message Type'->'Set Data Type'->'Create New Data Type', to create a new data type (Usually, Service Name + ReqDataType / RespDataType),
+3# Create Service Fields: In the input/output node, right click 'Refered Message Type'->' Refered Data Type'->'Add element' to create the structure
+4. Define the element type according to the Service Definition file
+1# For structure and table, create a root element, right click 'Set Global Type Reference' to select an existing or create a new DataType structure. (Max. Occurs 1 for structure, unbounded for table)
+2# Input Mandatory: Min. Occurs 0 for optional and 1 for mandatory
+3# Fields Type: For string filed, set XSD type as string and set the ' Max. Length '
+For Decimal field: set XSD type = decimal and ABAP type = string or XSD type = double and ABAP type = FLTP
+5. Active the service.
+1.2.2	Active Service Class
+1. Find the Implementing Class name, and Active it in SE24
+2. In the Class Method, create the start inbound process method and active it.
+3. If we use a new business ID in the class, we need define the Business Message and define the WebService Parser in IDXPF Customizing Configuration (T-code: /IDXPF/DISP_CUST)
+
+1.2.3	DB Table update
+If no new fields need to be created, skip this step.
+If the new fields need to be assigned the existing structure, add the fields to the existing structure.
+If new structure need to be created, follow the steps:
+
+1. Create the Structure and Table Type (for table)
+2. Assign it to Additional Message structure /ACIDX/S_MSG_DATA_ADD (for structure) or /ACIDX/S_MSG_DATA_ADD_TABLES (for Table Type)
+3. Create Table for the new structure, add fields PROC_REF and PROC_STEP_REF as key. (for table type, add an additional key COUNTER )
+4. Update the Class /ACIDX/CL_IMPL_PROCESS_DOC_DB for DB update.
+UPDATE_PDOC:  Add new table to Define_data
+SELECT_MSG_MASS: Load new table
+5 Add the new component to UI Monitor configuration (Add a row with 'UI Comp.' name 'STEPADD_**')
+
+1.2.4	Update the Mapping
+1.Go to Define Message Mapping in /IDXPF/DISP_CUST, create new Mapping Entries with WebService implementing Class and Method
+2 Some Special Mapping Logic
+For Address, we use exit function /ACIDX/FM_EXIT_ADDRESS for mapping
+For Multiple nested tables, create exit function for mapping
+For multi structures mapping to the same DB table, create exit function for mapping (ref to FM /ACIDX/FM_EXIT_BP_ADIST)
+
+1.2.5	Create Binding in SOA Manager
+Ref to 4.2.1, export the WSDL and Services URL.
+
+2	Update Inbound Service
+2.1	Introduction
+Update the Inbound Service ref to WebService Definition
+2.2	Details and Execution
+2.2.1	Service update
+1. Find the structure which need to be updated, double check Where-Used list button to check if used in other services.
+ 
+2. If the usage column has 'external usage' icon, means that it was used in other services, if the usage column has only 'internal usage' icon, means that the datatype was only used in this service.
+
+
+3. If the datatype was internal usage, skip this step, else, double click the datatype name to go to the datatype screen.
+
+
+Click the 'COPY' button to copy a new datatype and active it 
+
+In the structure, right click, choose Set Global Type Reference->Select Existing Global Type, find the new created datatype  with ABAP Type and Name
+
+
+4. Add the new fields to the structure, and activate it to finish the service definition update.
+5. Update the WSDL file, logon in the SOA Manager, past the WSDL url, save the WSDL file.
+2.2.2	DB Table update
+Update the corresponding database structure, ref to 2.2.3
+2.2.3	Mapping Update
+If the new Datatype was assigned to the structure, we need to delete the old mapping and create a new mapping. Ref to 1.2.4 to create the Mapping.
+If we add or delete fields to the existing datatype (no new datatype was assigned), add or delete lines for the changed fields
+2.2.4	Export the updated WSDL
+Connect to the SOA Manager, with the WSDL URL, open it in browser, and save it as WSDL.
+3	Consume Outbound Service 
+
+3.1	Introduction
+Consume the outbound service 
+
+3.2	Details and Execution
+3.2.1	Create Consumer Service
+
+
+1. Update the WSDL file from TIBCO, delete the <wsdl:service> tag and its content. Move the <wsdl:message> tag here.
+
+2. Create consumer services in SPROXY
+3. With screen option Service Consumer -> External WSDL -> Local file -> File position -> Package: /ACIDX/IDE, Prefix: /ACIDX/->Finish to create the consumer service, active the service.
+3.2.2	Update Consumer Service
+In edit mode, click Regenerate button, follow the wizard to update the service
+3.2.3	Update the Mapping
+For the new service, create the Business Message ID and WebService Message Parser in /IDXPF/DISP_CUST
+Create the new field mapping for the WebService Class and Method (Delete the old one if exist), and create DB table fields if needed. Ref to 1.2.3&1.2.4
+3.2.4	Create Logical Port in SOA Manager
+Ref to 4.2.2, create the Logical Port. And Test the connection in SPROXY.
+4	Update SOA Manager
+4.1	Introduction
+4.2	Details and Execution
+4.2.1	Create Inbound Binding
+1. Go to Service, find the service
+2. Click the service, click the Create Service button
+3. Input the new Service and Binding Name
+
+
+In the Provider Security, check the UserID/Password
+With default, finish the create step, click the 
+Get the URL
+
+4.2.2	 Create Outbound Logical Port
+ 
+1 Find the consumer service in SOA Manager
+2 Click Create->Manual Configuration, input the Logical Port Name and set it as default
+3 In the Security screen, choose User ID/Password, and input the ID and Password
+
+
+
+
+4. In the HTTP Settings screen, input the URL path, host address, port 
+5 In the Operation Setting screen, set the SOAP action for the Operation method.
+6 The URL path and SOAP action can be found in the WSDL file
+
+
+
+

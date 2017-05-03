@@ -1,3 +1,49 @@
+details about SAP Barcodes
+http://www.erpgreat.com/abap/details-information-about-sap-barcodes.htm
+
+questions for bar code printing in SAP
+http://www.erpgreat.com/abap/questions-about-bar-code-printing-in-sap.htm
+
+Step by step create barcode for smartforms 
+more details see:
+https://wiki.scn.sap.com/wiki/display/Snippets/Step-by-step+New+Barcode+Technology+for+Smart+Forms
+
+Which barcode printer are you using ? download this file and see.
+http://www.servopack.de/Files/HB/ZPLcommands.pdf.
+
+
+
+1. SE73 SAPScript Font Maintenance to create or change bar codes.
+
+choose system barcodes. created. 
+
+barcode alignment.
+normal -> scan direction is from left to right.
+rotated -> scan direction is rotated by 90 degree from top to bottom
+inverted -> scan direction is rotated by 180 degree from right to left
+bottom-up -> scan direction is rotated by 270 degree from bottom to top
+
+save barcode.
+
+2. import barcode to smartstyles.
+tcode SMARTSTYLES
+create a style ZSMS_BARCODE
+
+create paragraph format p1 .
+
+create charcter format c1. 
+
+Import the barcode in C1. 
+
+save and activate the styles.
+
+3. create smartforms ZSFS_BARCODE
+tcode smartforms.
+in form attributes, import style in the output option.
+
+define import parameter into import tab of form interface.
+
+
 To Create a Bar code prefix:
 
 1) Go to T-code - SPAD -> Full Administration -> Click on Device Type -> Double click the device for which you wish to create the print control -> Click on Print Control tab ->Click on change mode -> Click the plus sign to add a row or prefix say SBP99 (Prefix must start with SBP) -> save you changes , it will ask for request -> create request and save

@@ -31,30 +31,4 @@ Step 5. Creation of a Query
 
 
 
-some FOP to be adapted like ZMOVEPP
 
-Functional design. Technical design document. 
-
-Previous IP developer : ZCBD and ZTMR
-
-ZCBD_MONITOR
-
-ZTMR : transfer meter reading
-
-Loan creation :event 2900
-
-Clearing of programs
-
-create one ZONEEPP package
-
-Estimation of electricity balance
-
-Test Development. 
-
-Restrictions on standard objects coming from PP Trans
-
-custom method with screen for move-in
-
-two technology.
-ZSTS 
-CBD
