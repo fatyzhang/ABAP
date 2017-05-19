@@ -1,2 +1,129 @@
 https://blogs.sap.com/2015/01/09/bopf-scn-sitemap/
 https://blogs.sap.com/2015/02/12/e2e-bopf-sadl-gw-sapui5-introduction/
+https://assets.cdn.sap.com/sapcom/docs/2015/07/64a97250-537c-0010-82c7-eda71af511fa.pdf
+https://archive.sap.com/documents/docs/DOC-45425
+https://blogs.sap.com/2014/02/21/bopf-overview-and-report-development-with-a-usecase/
+https://blogs.sap.com/2013/01/16/navigating-the-bopf-part-3-working-with-the-bopf-api/
+https://blogs.sap.com/2014/10/14/team-fpm-how-to-create-beautiful-apps-on-bopf-objects-simple-without-code-and-using-latest-features/
+https://blogs.sap.com/2014/04/07/accessing-a-delegated-object-in-bopf/
+
+
+5/14  -  SADL  
+5/15  -  BOPF - create BOPF/test/debug 
+5/16  -  BOPF with Draft .   test / debug 
+5/17  -  Preparing PPT 
+5/18  -  Preparing PPT/training .
+
+SADL
+SADL (Service Adaptation Description Language) is an ABAP technology that enables the consumption of entity relationship-like ABAP data models in various scenarios with a common development experience based on a model-driven approach.
+
+Therefore, SADL enables fast read access to data for scenarios on mobile and desktop applications based on SAP HANA using query push-down.
+
+SADL is always integrated into a real concept - for example, a UI technology - but is not intended to be used by an application developer directly. SADL allows the consumption of the supported SADL models in different environments. As of now, SADL is integrated into:
+
+SAP List Viewer with Integrated Data Access (ALV with IDA), offering consumption of DDIC table views and Core Data Services (CDS).
+Web Dynpro ABAP Using Floor Plan Manager (FPM): The FPM provides creation wizards (application creation toolkit) that enable consumption of the integrated types of SADL models. UI building blocks (UIBB) such as searches, lists, and charts can be built by simply selecting the relevant data model. Transactional UIBBs can also be selected.
+Gateway for OData Implementation: With SADL, integration within the Gateway Service Builder is provided. An OData Model can be implemented through SADL by mapping the relevant element from the SADL model (for example, DDIC table) to the OData properties.
+
+
+Service Adaptation Description Language
+首先它是一种ABAP技术，它是用来进行消费的。SADL不是由应用程序开发人员直接调用的。它是集成在其他的技术当中。
+ALV with IDA 
+webdynpro using FPM.
+gateway for odata implemention.
+
+SADL是一种框架，可以统一的方式消耗不同的业务对象模型，以及其他基于实体的模型，特别是DDIC表和视图。 不需要了解建模框架的细节，如业务对象过程框架（BOPF）或（业务对象层）BOL; SADL实体模型将所有必需的信息暴露给UI。
+使用SADL，可以将查询直接推送到数据库本身，从而提高响应周期时间，并且通过合适的数据库，可以非常快速地检索和显示大量数据（数百万条记录）。
+
+所有集成通用功能是SADL通过将用户请求推送到数据库（如果适用）来优化运行时执行，即查询的参数，例如实例，排序，分页，聚合，分组，文本搜索和 也可以组合成单个SQL语句的基于实例的授权。
+
+在底层SADL模型由业务对象框架（如BOPF）提供的情况下，还提供了创建，更新，删除和检查数据的事务请求。 这里将运行时执行委托给业务对象运行时，同时也可以考虑验证和确定。
+
+SADL started out with the ambition to remove all “heavy” framework overhead for read-only scenarios. By doing so, SADL is an ultra-fast query engine which makes it possible to access and interactively page through millions of records with very short round-trip times. For instance, SADL provides the run time engine behind ALV and FPM on SAP HANA.
+
+SADL uses BOPF’s metadata information to bypass the BOPF runtime for read-only scenarios. This is only possible if there is a static mapping between the structures used by the BOPF service manager API and the underlying database.
+
+Today, SADL is no longer limited to read-only use cases, but it also offers support for modifying operations. SADL does not try to directly update data on the database, but delegates any modifying request to BOPF. This ensures the consistency of business data.
+
+Although SADL supports modifying operations by delegation, it is important to keep in mind that the full use of SADL is generally limited to scenarios where it is possible to establish a static mapping of business object data to the database.
+
+There is a natural conflict between some BOPF BOs which have been optimized for traditional SAPGUI or WebDynpro applications on the one hand, and modern web-based applications using stateless services on the other hand. Some framework optimizations which have been introduced for traditional applications can turn into a bourdon for modern architectures.
+
+In a stateless context, you would like to post only small updates with each service call. You might want to “activate” your object only after a series of modifications which would not make much sense each on their own. You would like to be able to save an incomplete version (“draft”) of your document and continue working on it later – knowing that the existence of your draft prevents the original document from being modified in the background.
+
+On the other hand, a classic BOPF BO – if it has been developed with only session-based applications in mind – may refuse to save any business data as long as it is not in a “consistent state”. Inconsistencies are only temporarily allowed within the current ABAP session. For the time of the current session, BOPF locks instances against parallel changes.
+
+A stateless service request is answered by an ABAP session. The next request creates a new session. Any locks acquired in the first session are lost as soon as it ends. In addition, some updates may fail because of save-preventing BOPF validations.
+
+The cheap answer to this problem is: Only use a BOPF BO in a stateless service after you have verified that it is suitable for the scenarios you are targeting. Especially BOs with strict consistency checks or save-preventing validations are likely to cause issues.
+
+However, at SAP we are working on a better solution to bridge the gap between classic applications and the world of stateless UIs. Stay tuned!
+
+BOPF
+Important transactions to note while working on BOPF:
+
+/BOBF/CONF_UI: This transaction is used to display the modeling of the TM business objects. This is called as BOPF Modeling Tool.
+
+/BOBF/CUST_UI: This transaction is used for launching the BOPF Enhancement workbench. This transaction is used for enhancing the standard business objects and for creating a new business objects.
+
+/BOBF/TEST_UI: This transaction is used as a test environment. This transaction would help consultant (Either it is a functional or technical) to see the data of a particular Forwarding order or Freight order or Freight booking. I will explain in detail in my next blog effective use of test environment.
+
+/BOBF/IF_TRA_TRANSACTION_MGR
+This object reference provides a transaction manager which can be used to manage transactional changes. Such transactions could contain a single step (e.g. update node X) or be strung out across multiple steps (add a node, call an action, and so on).
+/BOBF/IF_TRA_SERVICE_MANAGER
+The service manager object reference provides us with the methods we need to lookup BO nodes, update BO nodes, trigger validations, perform actions, and so on.
+/BOBF/IF_FRW_CONFIGURATION
+This object reference provides us with metadata for a particular BO. We’ll explore the utility of having access to this metadata coming up shortly.
+
+
+What does BOPF stand for?
+The Business Object Processing Framework is an ABAP OO-based framework that provides a set of generic services and functionalities to speed up, standardize, and modularize your development. BOPF manages the entire life cycle of your business objects and covers all aspects of your business application development. Instead of expending effort for developing an application infrastructure, the developer can focus on the individual business logic. Using BOPF, you get the whole application infrastructure and integration of various components for free. This allows you to rapidly build applications on a stable and customer-proved infrastructure.
+
+Who uses BOPF?
+BOPF is not really a new framework. In fact, it is well established and broadly used in multiple SAP ByDesign and SAP Business Suite applications and products – for example, Transportation Management (TM), Environment, Health and Safety (EH&S), SAP Supplier Lifecycle Management, SAP Management of Change, SAP Quality Issue Management, to name but a few. Apart from its use in SAP internal development, BOPF is also used in customer development projects.
+
+How can SAP customers use BOPF?
+Due to increased interest, BOPF is also used in SAP customer development projects. It is released with SAP Business Suite EHP5 SP11, SAP Business Suite EHP6 SP05, and SAP Business Suite EHP7. Moreover, starting with the SAP NetWeaver 7.50 release, BOPF is available in the SAP NetWeaver standalone system - as part of the SAP BASIS layer.
+
+
+What are the main components of the application infrastructure?
+With BOPF, you have a framework at your disposal with which you can seamlessly integrate different components of business applications. You can use them out-of-the-box. The advantages of using BOPF are thus obvious:
+
+When using BOPF you don’t have to care about the development of adapters or integration layers to consume the following components:
+
+Action
+
+to implement a service (operation or behavior) of a business object. An action is explicitly triggered by a service consumer, such as the user interface.
+
+Determination              
+
+to provide functions that are automatically executed as soon as certain trigger conditions are fulfilled. A determination is triggered internally due to changes made to the instance of a business object.
+
+Validation
+
+to either validate whether a specific action can be executed on a specific node instance (action validations) or whether a set of node instances is consistent (consistency validations).
+
+Query	
+to search for business object instances that meet certain search criteria.
+
+Authorization Check	
+to provide an authorization concept for BO nodes (for their data and for the operations on their data).
+
+Association	
+to connect business object instances that are located on different nodes.
+
+
+BOPF - 
+
+
+
+
+
+
+
+
+
+
+
+
+
