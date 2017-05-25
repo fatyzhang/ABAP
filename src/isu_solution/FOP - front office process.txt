@@ -1,0 +1,18 @@
+FOP - front office process
+A front office process is a tool using which you can integrate complex IS-U business processes in the front office/CIC. A front office process consists of one or more process steps that can in turn consist of processes.
+
+https://help.sap.com/saphelp_erp60_sp/helpdata/en/04/83ce53118d4308e10000000a174cb4/content.htm
+
+Menu: Utilities --> Customer Service --> Front-office
+
+Customizing under SAP Utilities ->Customer Service -> Front Office -> Define Front Office Processes. 
+
+
+EWBC 
+ENVD
+
+
+Integrate FOP to CIC .
+Customizing -> CIC -> Define data environment for Navigation Area.
+Maintain activity profile 
+

@@ -1,0 +1,284 @@
+ISU_O_MOVE_IN_ACTION
+
+
+Move Out 
+
+ZRESILPP 
+	
+	1. sub flow: update status and end date. 
+	PP FM, A -  ,  S end date . -> move out date. 
+
+	2. work order sub flow - update blance. 
+	   -> IP action . 
+	PP balance of move-out / unreadable status of move out./ Estimated date for incident. 
+    
+	3. Final invoice. 
+
+	o	Take-over case : calculate and post the dues (+ and -), GET_PROGRAM_DUE
+			clear and deactivate the loan, DEACTIVATE_PROGRAM   
+			update the PP_PROGRAM header (..) , UPDATE_PROGRAM_DATA  
+			open item will NOT be picked up in the final bill
+	o	Pay-complete case : calculate and post the dues (+ and -), 
+		clear and deactivate the loan, 
+		update the PP_PROGRAM header (..) , open item will be picked up in the final bill
+
+
+update contract 
+
+METHOD change_contract.
+
+  DATA: ls_isu00_message    TYPE isu00_message,
+        ls_process_step_key TYPE /idxpf/s_proc_step_key,
+        ls_bapiret2         TYPE bapiret2,
+        lt_bapiret2         TYPE TABLE OF bapiret2,
+        lt_euiinstln        TYPE TABLE OF euiinstln,
+        lt_ever             TYPE TABLE OF ever,
+        ls_ever             TYPE ever,
+        lv_msg              TYPE string,
+        ls_everh            TYPE everh,
+        lv_bu_group         TYPE bu_group,
+        lv_triplet          TYPE char62,
+        lv_version          TYPE /idxpf/de_process_version,
+        lv_not_applicable   TYPE flag,
+        ls_contractdata     TYPE bapiisucontract,
+        ls_contractdatax    TYPE bapiisucontractx,
+        lv_catuso           TYPE string,
+        lv_keydate          TYPE dats.
+
+  lv_version = cs_process_step_data-proc_version.
+
+* DSC KS Skip method for triplet Defect 61
+  CONCATENATE cs_process_step_data-bpm_code cs_process_step_data-serv_code cs_process_step_data-serv_detail
+    INTO lv_triplet SEPARATED BY '/'.
+  IF lv_triplet EQ 'SC_18_V/0221/MCU'.
+    lv_not_applicable = abap_true.
+  ENDIF.
+
+  IF lv_not_applicable IS INITIAL.
+
+    MOVE-CORRESPONDING cs_process_step_data TO ls_process_step_key.
+
+* DSC HA 20161020 -  use different date
+    CALL METHOD zaidx_cl_utility_services=>determine_process_date
+      EXPORTING
+        iv_action         = zaidx_if_constants=>gc_action-change_ct  " 'CHANGE_CT'
+        is_proc_step_data = cs_process_step_data
+        ir_process_data   = ir_process_data
+      RECEIVING
+        rv_date           = lv_keydate.
+
+* get current contract (and set installation in step data)
+    IF cs_process_step_data-installation IS INITIAL.
+
+      CALL METHOD zaidx_cl_utility_services=>get_instl_from_pod
+        EXPORTING
+          iv_intui   = cs_process_step_data-int_ui
+          iv_keydate = lv_keydate
+        RECEIVING
+          rv_anlage  = cs_process_step_data-installation.
+    ENDIF.
+
+    SELECT SINGLE * FROM ever INTO ls_ever
+      WHERE anlage EQ cs_process_step_data-installation
+      AND einzdat LE lv_keydate
+      AND auszdat GE lv_keydate.
+
+    cs_process_step_data-contract         = ls_ever-vertrag.   " MLS 03.10.2016
+    cs_process_step_data-contract_account = ls_ever-vkonto.    " MLS 03.10.2016
+
+    IF lv_version = zaidx_if_constants=>gc_first_process_version.
+      bp_address_usage_assignment(
+        EXPORTING
+          ir_process_data         = ir_process_data
+        CHANGING
+          cs_process_step_data    = cs_process_step_data
+          cr_process_log          = cr_process_log
+      ).
+    ENDIF. "proc_version 1
+* End of Address Data Update
+*------------------------------------------------------------------------------
+
+*------------------------------------------------------------------------------
+* 3.10.2 Contract data update
+*------------------------------------------------------------------------------
+    " Date & Time of Extension service
+    IF cs_process_step_data-data_fine_fornitura IS NOT INITIAL.
+      ls_contractdata-contr_end                 = cs_process_step_data-data_fine_fornitura.
+      ls_contractdatax-contr_end                = 'X'.
+      ls_contractdata-cust_concl_time           = cs_process_step_data-ora_fine_fornitura.
+      ls_contractdatax-cust_concl_time          = 'X'.
+    ENDIF.
+
+    " Get KOFIZ from Contract Account
+    SELECT SINGLE kofiz_sd INTO ls_contractdata-actdeterid
+         FROM fkkvkp WHERE vkont = ls_ever-vkonto.
+    IF sy-subrc EQ 0.
+      IF ls_ever-kofiz <> ls_contractdata-actdeterid.
+        ls_contractdatax-actdeterid = 'X'.
+      ENDIF.
+    ENDIF.
+
+*<<< DSC HA 20161019 - change CONTRACTCLASS  ( DOMR/DOMN /NDOM )
+    CALL METHOD zaidx_cl_utility_services=>provide_instfact_value_02
+      EXPORTING
+        iv_anlage     = cs_process_step_data-installation
+        iv_operand    = zaidx_if_constants=>gc_operand-ee2_catuso
+        iv_keydate    = lv_keydate
+*       iv_valid      = 'X'
+        iv_get_val_02 = 'X'
+      IMPORTING
+        ev_value      = lv_catuso.
+
+    CASE lv_catuso.
+      WHEN 'USO_DOM'.
+        IF ( cs_process_step_data-residente EQ zaidx_if_constants=>gc_residence_si  OR  "S
+             cs_process_step_data-residenza EQ zaidx_if_constants=>gc_residence_si ). "S
+          ls_contractdata-contractclass = 'DOMR'.
+          ls_contractdatax-contractclass = 'X'.
+        ELSEIF ( cs_process_step_data-residente EQ zaidx_if_constants=>gc_residence_no  OR  "N
+             cs_process_step_data-residenza EQ zaidx_if_constants=>gc_residence_no ). "N
+          ls_contractdata-contractclass = 'DOMN'.
+          ls_contractdatax-contractclass = 'X'.
+        ENDIF.
+      WHEN OTHERS.
+        IF ( cs_process_step_data-residente EQ zaidx_if_constants=>gc_residence_no  OR  "N
+             cs_process_step_data-residenza EQ zaidx_if_constants=>gc_residence_no ). "N
+          ls_contractdata-contractclass = 'NDOM'.
+          ls_contractdatax-contractclass = 'X'.
+        ENDIF.
+    ENDCASE.
+
+    IF ls_contractdata IS NOT INITIAL.
+      ls_contractdata-contract = ls_ever-vertrag.
+
+      CALL FUNCTION 'BAPI_ISUCONTRCT_CHANGEFROMDATA'
+        EXPORTING
+          contractdata  = ls_contractdata
+          contractdatax = ls_contractdatax
+        IMPORTING
+          return        = ls_bapiret2.
+
+      IF ls_bapiret2-type NE zaidx_if_constants=>gc_mt_error "'E'
+        AND ls_bapiret2-type NE zaidx_if_constants=>gc_mt_abort."'A'.
+
+        CALL FUNCTION 'BAPI_TRANSACTION_COMMIT'
+          EXPORTING
+            wait = 'X'.
+
+        " success message
+        MESSAGE ID zaidx_if_constants=>gc_mc_proc "'ZAIDX_PROCESS'
+          TYPE zaidx_if_constants=>gc_mt_success "'S'
+          NUMBER 039 INTO lv_msg
+          WITH ls_ever-vertrag.
+
+      ELSE.
+        " error message
+        MESSAGE ID zaidx_if_constants=>gc_mc_proc "'ZAIDX_PROCESS'
+          TYPE zaidx_if_constants=>gc_mt_error "'E'
+          NUMBER 040 INTO lv_msg
+          WITH ls_ever-vertrag.
+
+        IF NOT cr_process_log IS BOUND. "we have to raise the exception here
+          /idxpf/cx_utility_error=>raise_util_exception_from_msg( iv_exception_code = zaidx_if_constants=>gc_excp_code-ct_update_error )."+KP20160308
+        ENDIF.
+      ENDIF.
+
+      IF cr_process_log IS BOUND.
+*             put the message into the log
+        CALL METHOD cr_process_log->add_message_to_process_log
+          EXPORTING
+            is_process_step_key = ls_process_step_key.
+
+        IF NOT ls_bapiret2 IS INITIAL.
+          APPEND ls_bapiret2 TO lt_bapiret2.
+
+          CALL METHOD zaidx_cl_utility_services=>log_bapiret_to_pdoc
+            EXPORTING
+              it_bapiret2          = lt_bapiret2
+              is_process_step_data = cs_process_step_data
+              iv_exception_code    = zaidx_if_constants=>gc_excp_code-ct_update_error
+*             iv_flag_raise_exception = ABAP_TRUE
+            CHANGING
+              cr_process_log       = cr_process_log.
+        ENDIF.
+      ENDIF.
+
+* DSC RM 20161122 check contract for market situation
+      IF ls_ever-bukrs EQ zaidx_if_constants=>gc_bukrs_suppl. "'AEEN'.
+
+*     get CRM_OBJECT_ID
+        SELECT SINGLE * FROM everh INTO ls_everh
+          WHERE vertrag EQ ls_ever-vertrag
+          AND bis GE lv_keydate
+          AND ab LE lv_keydate.
+
+        CLEAR lt_bapiret2.
+
+        CALL FUNCTION 'ZACM_IDX_UPD_PROD_CONTR_CRM_ID'
+          EXPORTING
+            iv_anlage          = cs_process_step_data-installation
+            iv_ab              = lv_keydate "DSC RM 20170116
+            iv_bis             = zaidx_if_constants=>gc_max_date
+            iv_bukrs           = zaidx_if_constants=>gc_bukrs_suppl
+            iv_sparte          = zaidx_if_constants=>gc_division_electr
+            iv_new_contract    = space
+            iv_crm_contract_h  = ls_everh-contracthead      " Defect 3917 - 15.11.2016
+*           iv_crm_contract_h  = ls_everh-crm_object_id    " Defect 3917 - 15.11.2016
+          TABLES
+            t_return           = lt_bapiret2
+          EXCEPTIONS
+            product_not_found  = 1
+            wrong_call         = 2
+            internal_error     = 3
+            brf_rule_error     = 4
+            error_occurred     = 5
+            document_locked    = 6
+            no_change_allowed  = 7
+            no_authority       = 8
+            not_found          = 9
+            input_error        = 10
+            product_locked     = 11
+            document_not_saved = 12
+            not_customized     = 13
+            function_not_exist = 14
+            OTHERS             = 15.
+
+        zaidx_cl_utility_services=>log_bapiret_to_pdoc(
+          EXPORTING
+            it_bapiret2             = lt_bapiret2    " Return parameter table
+            is_process_step_data    = cs_process_step_data    " Proc. Key: (Dynamc) Proc. Step Ref. + (Static) Proc. Step ID
+            iv_exception_code       = zaidx_if_constants=>gc_excp_code-prod_determ_error
+          CHANGING
+            cr_process_log          = cr_process_log    " IDXPF: Process Document Log Container
+        ).
+
+      ELSE. " No data changes from PDOC
+        lv_not_applicable = abap_true.
+      ENDIF.
+    ENDIF.
+  ENDIF.
+
+  IF lv_not_applicable IS NOT INITIAL.
+    zaidx_cl_utility_services=>add_activity_to_pdoc(
+      EXPORTING
+        iv_proc_ref      = cs_process_step_data-proc_ref
+        iv_proc_step_ref = cs_process_step_data-proc_step_ref
+        iv_activity      = zaidx_if_constants=>gc_activity-zna
+        iv_actvt_var1    = 'CHANGE_CONTRACT'
+      CHANGING
+        cr_process_log   = cr_process_log
+    ).
+  ENDIF.
+
+ENDMETHOD.
+
+
+
+
+TEMKSV   PP 
+
+QEO(300)
+
+
+
+
