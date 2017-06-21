@@ -16,3 +16,9 @@ Integrate FOP to CIC .
 Customizing -> CIC -> Define data environment for Navigation Area.
 Maintain activity profile 
 
+
+
+
+
+
+
