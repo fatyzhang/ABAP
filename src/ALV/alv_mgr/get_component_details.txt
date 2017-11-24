@@ -1,0 +1,5 @@
+method /IDXPF/IF_UI_COMPONENT_MGR~GET_COMPONENT_DETAILS.
+
+  rs_ui_component_details = gs_ui_component_details.
+
+endmethod.

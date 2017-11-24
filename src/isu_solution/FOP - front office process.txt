@@ -3,7 +3,7 @@ A front office process is a tool using which you can integrate complex IS-U busi
 
 https://help.sap.com/saphelp_erp60_sp/helpdata/en/04/83ce53118d4308e10000000a174cb4/content.htm
 
-Menu: Utilities --> Customer Service --> Front-office
+Menu: Utilities --> Custoer Service --> Front-office
 
 Customizing under SAP Utilities ->Customer Service -> Front Office -> Define Front Office Processes. 
 
@@ -11,10 +11,36 @@ Customizing under SAP Utilities ->Customer Service -> Front Office -> Define Fro
 EWBC 
 ENVD
 
-
+ 
 Integrate FOP to CIC .
 Customizing -> CIC -> Define data environment for Navigation Area.
 Maintain activity profile 
+
+
+9000014543
+
+rules: 
+for PERG, reminder case - no SD order is created. 
+
+else.  create SD oder with type ZISU, and billing request. 
+
+
+for LBC, if it is Global payment . 
+the fees is included in move-in fees. 
+SD order ZPRE is created, with SD invoices.
+
+if it is not global payment.
+the fees is included in the BADI.   
+SD order with type ZPRE is created. 
+
+
+
+
+
+
+
+
+
 
 
 

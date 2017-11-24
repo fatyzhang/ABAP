@@ -1,0 +1,24 @@
+METHOD /idxpf/if_ui_component_mgr~highlight_rows.
+
+  DATA:
+    lx_previous     TYPE REF TO /idxpf/cx_general.
+
+*--------------------------------------------------------------------*
+  TRY.
+      CALL BADI gr_badi_ui_comp_disp->highlight_rows
+        EXPORTING
+          is_component_details = is_component_details
+          is_alv_details       = me->gs_ui_component_details.
+
+    CATCH /idxpf/cx_ui_error INTO lx_previous.
+      MESSAGE e006(/idxpf/general) INTO gv_mtext
+                                   WITH /idxpf/if_constants=>gc_badi_ui_comp_disp
+                                        'HIGHLIGHT_ROWS'.
+      CALL METHOD me->/idxpf/if_ui_component_mgr~show_message_popup
+        EXPORTING
+          iv_add_currenty_message = /idxpf/if_constants=>gc_true
+*         it_messages             =
+          ir_exception            = lx_previous.
+  ENDTRY.
+
+ENDMETHOD.

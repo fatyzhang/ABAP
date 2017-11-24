@@ -1,0 +1,15 @@
+method /IDXPF/IF_UI_COMPONENT_MGR~REGISTER_ASSOC_COMPONENT_MGR.
+
+  DATA:
+    lr_ui_alv_mgr       TYPE REF TO /IDXPF/CL_UI_ALV_MGR,
+    lr_ui_component_mgr TYPE REF TO /IDXPF/IF_UI_COMPONENT_MGR.
+
+  LOOP AT it_ui_component_manager INTO lr_ui_component_mgr.
+    CHECK NOT lr_ui_component_mgr IS INITIAL.
+
+    lr_ui_alv_mgr ?= lr_ui_component_mgr.
+
+    SET HANDLER me->handle_trigger_action FOR lr_ui_alv_mgr.
+  ENDLOOP.
+
+endmethod.

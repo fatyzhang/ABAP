@@ -1,0 +1,34 @@
+METHOD /idxpf/if_ui_component_mgr~show_message_popup.
+
+  DATA:
+   ls_message  TYPE /idxpf/s_pdoc_log_msg,
+   lt_message  TYPE /idxpf/t_pdoc_log_msg,
+   lr_previous TYPE REF TO /idxpf/cx_general.               "#EC NEEDED
+
+*--------------------------------------------------------------------*
+  IF iv_add_currenty_message EQ /idxpf/if_constants=>gc_true.
+    ls_message-log_message = /idxpf/cl_utility_service=>/idxpf/if_utility_service~create_error_message( ).
+  ENDIF.
+
+  IF ir_exception IS NOT INITIAL.
+    CALL METHOD ir_exception->get_exception_chain
+      CHANGING
+        ct_exception_log = lt_message.
+  ENDIF.
+
+  IF iv_add_currenty_message EQ /idxpf/if_constants=>gc_true.
+    APPEND ls_message TO lt_message.
+  ENDIF.
+
+  INSERT LINES OF it_messages INTO TABLE lt_message.
+
+  TRY.
+      CALL METHOD /idxpf/cl_utility_service=>/idxpf/if_utility_service~display_messages
+        EXPORTING
+          it_message = lt_message.
+
+    CATCH /idxpf/cx_utility_error INTO lr_previous.
+      MESSAGE e020(/idxpf/ui).                       "#EC CI_USE_WANTED
+  ENDTRY.
+
+ENDMETHOD.

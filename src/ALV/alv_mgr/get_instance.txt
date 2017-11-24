@@ -1,0 +1,48 @@
+METHOD /idxpf/if_ui_component_mgr~get_instance.
+
+  DATA:
+    lv_class_name  TYPE seoclsname,
+    lv_method_name TYPE seocpdname,
+    lr_alv_manager TYPE REF TO /idxpf/cl_ui_alv_mgr,
+    lr_previous    TYPE REF TO /idxpf/cx_general.
+
+*--------------------------------------------------------------------*
+  IF ( cs_dialog_object_item IS INITIAL ) OR ( cs_dialog_object_item-alv_mgr_class IS INITIAL ).
+    CALL METHOD /idxpf/cl_utility_service=>/idxpf/if_utility_service~get_current_source_pos
+      IMPORTING
+        ev_class_name  = lv_class_name
+        ev_method_name = lv_method_name.
+
+    MESSAGE e001(/idxpf/ui) INTO gv_mtext WITH lv_class_name lv_method_name.
+    CALL METHOD /idxpf/cx_ui_error=>raise_ui_exception_from_msg.
+  ENDIF.
+
+*--------------------------------------------------------------------*
+  TRY.
+      CREATE OBJECT er_ui_component_mgr
+        TYPE
+          (cs_dialog_object_item-alv_mgr_class)
+        EXPORTING
+          iv_component                          = cs_dialog_object_item-component.
+
+    CATCH /idxpf/cx_ui_error INTO lr_previous.
+      MESSAGE e029(/idxpf/ui) INTO gv_mtext WITH cs_dialog_object_item-alv_mgr_class
+                                                 cs_dialog_object_item-component.
+
+      CALL METHOD /idxpf/cx_ui_error=>raise_ui_exception_from_msg
+        EXPORTING
+          ir_previous = lr_previous.
+  ENDTRY.
+
+*--------------------------------------------------------------------*
+  lr_alv_manager ?= er_ui_component_mgr.
+  lr_alv_manager->gs_ui_component_details-container = ir_container.
+
+  CALL METHOD lr_alv_manager->initiate
+    EXPORTING
+      ir_process_data       = ir_process_data
+      ir_process_log        = ir_process_log
+    CHANGING
+      cs_dialog_object_item = cs_dialog_object_item.
+
+ENDMETHOD.

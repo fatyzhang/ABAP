@@ -1,0 +1,56 @@
+METHOD /idxpf/if_ui_component_mgr~refresh.
+
+  DATA:
+    lr_previous      TYPE REF TO /idxpf/cx_general.
+
+*--------------------------------------------------------------------*
+  CLEAR: "gs_ui_component_details-data, This must not be done.
+*         The ALV Grid ottab has a reference to this table and
+*         thus can only be updated correctly if the reference is preserved!
+         gs_ui_component_details-detail_table.
+
+*--------------------------------------------------------------------*
+  gr_process_data = ir_process_data.
+  gr_process_log  = ir_process_log.
+
+  gs_ui_component_details-screen_attr = cs_dialog_object_item.
+
+* Reset field catalog
+  gs_ui_component_details-field_catalog = me->gt_field_catalog_back.
+
+*--------------------------------------------------------------------*
+* Determine display data
+  TRY.
+      CALL BADI gr_badi_ui_comp_disp->determine_display_data
+        EXPORTING
+          ir_process_data = gr_process_data
+          ir_process_log  = gr_process_log
+        CHANGING
+          cs_alv_details  = gs_ui_component_details
+          cr_process_log  = me->gr_process_log.
+
+    CATCH /idxpf/cx_ui_error INTO lr_previous.
+      MESSAGE e015(/idxpf/ui) INTO gv_mtext WITH gs_ui_component_details-component.
+      CALL METHOD /idxpf/cx_ui_error=>raise_ui_exception_from_msg
+        EXPORTING
+          ir_previous       = lr_previous
+          iv_exception_code = /idxpf/if_constants=>gc_exception_badi.
+  ENDTRY.
+
+  IF gs_ui_component_details-visible = /idxpf/if_constants=>gc_false.
+    RETURN.
+  ENDIF.
+
+*--------------------------------------------------------------------*
+* Refresh ALV table display
+  TRY.
+      CALL METHOD me->create_controls.
+
+    CATCH /idxpf/cx_ui_error INTO lr_previous.
+      MESSAGE e019(/idxpf/ui) INTO gv_mtext.
+      CALL METHOD /idxpf/cx_ui_error=>raise_ui_exception_from_msg
+        EXPORTING
+          ir_previous = lr_previous.
+  ENDTRY.
+
+ENDMETHOD.
