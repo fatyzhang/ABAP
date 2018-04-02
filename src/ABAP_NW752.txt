@@ -1,0 +1,166 @@
+*---------------------------------------------------------------------
+* ABAP Console Output
+*---------------------------------------------------------------------
+
+cl_demo_output=>display( result ). 
+
+click F9,  write to the ABAP console.
+
+
+*---------------------------------------------------------------------
+* ABAP keyword documentation	
+*---------------------------------------------------------------------
+
+https://help.sap.com/http.svc/rc/abapdocu_752_index_htm/7.52/en-US/index.htm
+
+*---------------------------------------------------------------------
+* Virtual Soring of internal tables	 - part 1
+*---------------------------------------------------------------------
+
+There is a new method VIRTUAL_SORT of class CL_ABAP_ITAB_UTILITIES. With that method, 
+you can virtually sort a set of internal tables. 
+
+First, we create some example data in three internal tables.
+
+TYPES:
+  BEGIN OF flight,
+    carrid   TYPE s_carr_id,
+    connid   TYPE s_conn_id,
+    cityfrom TYPE s_city,
+    cityto   TYPE s_city,
+  END OF flight,
+  flights TYPE STANDARD TABLE OF flight
+          WITH EMPTY KEY,
+  BEGIN OF city,
+    city      TYPE  s_city,
+    latitude  TYPE  s_lati,
+    longitude TYPE  s_long,
+  END OF city,
+  cities TYPE STANDARD TABLE OF city
+              WITH EMPTY KEY.
+DATA:
+  flight_tab    TYPE flights,
+  from_city_tab TYPE cities,
+  to_city_tab   TYPE cities.
+
+
+SELECT carrid, connid, cityfrom, cityto
+       FROM spfli
+       INTO CORRESPONDING FIELDS OF TABLE @flight_tab.
+
+SELECT city, latitude, longitude
+       FROM sgeocity
+       INTO TABLE @DATA(cities).
+
+TRY.
+    from_city_tab = VALUE #( FOR <fs> IN flight_tab
+                             ( cities[ city = <fs>-cityfrom ] ) ).
+    to_city_tab   = VALUE #( FOR <fs> IN flight_tab
+                             ( cities[ city = <fs>-cityto ] ) ).
+  CATCH cx_sy_itab_line_not_found.
+    MESSAGE 'Flight model data not consistent,' &&
+            ' use program SAPBC_DATA_GENERATOR' &&
+            ' to create the data.' TYPE 'X'.
+ENDTRY.
+
+*---------------------------------------------------------------------
+* Virtual Soring of internal tables	- part 2
+*---------------------------------------------------------------------
+Let’s sort the flight data virtually by the longitudes and latitudes of the departure and arrival cities, ascending and descending:
+
+DATA(sort_asc) = cl_abap_itab_utilities=>virtual_sort(
+                   im_virtual_source =
+                     VALUE #(
+                       ( source     = REF #( from_city_tab )
+                         components =
+                           VALUE #( ( name = 'latitude' )
+                                    ( name = 'longitude' ) ) )
+                       ( source     = REF #( to_city_tab )
+                         components =
+                           VALUE #( ( name = 'latitude' )
+                                    ( name = 'longitude' ) ) )
+                       ( source     = REF #( flight_tab )
+                         components =
+                           VALUE #( ( name = 'carrid' )
+                                    ( name = 'connid' ) ) ) ) ).
+
+cl_demo_output=>display( sort_asc ).
+
+DATA(sort_desc) = cl_abap_itab_utilities=>virtual_sort(
+                   im_virtual_source =
+                     VALUE #(
+                       ( source     = REF #( from_city_tab )
+                         components =
+                           VALUE #( ( name = 'latitude'
+                                      descending = abap_true )
+                                    ( name = 'longitude'
+                                      descending = abap_true ) ) )
+                       ( source     = REF #( to_city_tab )
+                         components =
+                           VALUE #( ( name = 'latitude'
+                                      descending = abap_true )
+                                    ( name = 'longitude'
+                                      descending = abap_true ) ) )
+                       ( source     = REF #( flight_tab )
+                         components =
+                           VALUE #( ( name = 'carrid' )
+                                    ( name = 'connid' ) ) ) ) ).
+cl_demo_output=>display( sort_desc ).
+
+
+*---------------------------------------------------------------------
+* Virtual Soring of internal tables	- part 3 . use single statements
+*---------------------------------------------------------------------
+
+cl_demo_output=>new(
+
+  )->next_section(
+  `Ascending Sort by Latitude, Longitude of CITYFROM, CITYTO`
+
+  )->write( VALUE flights(
+              FOR <idx>
+              IN cl_abap_itab_utilities=>virtual_sort(
+                   im_virtual_source =
+                     VALUE #(
+                       ( source     = REF #( from_city_tab )
+                         components =
+                           VALUE #( ( name = 'latitude' )
+                                    ( name = 'longitude' ) ) )
+                       ( source     = REF #( to_city_tab )
+                         components =
+                           VALUE #( ( name = 'latitude' )
+                                    ( name = 'longitude' ) ) )
+                       ( source     = REF #( flight_tab )
+                         components =
+                           VALUE #( ( name = 'carrid' )
+                                    ( name = 'connid' ) ) ) ) )
+              ( flight_tab[ <idx> ] ) )
+
+  )->next_section(
+  `Descending Sort by Latitude, Longitude of CITYFROM, CITYTO`
+
+  )->write( VALUE flights(
+              FOR <idx>
+              IN cl_abap_itab_utilities=>virtual_sort(
+                   im_virtual_source =
+                     VALUE #(
+                       ( source     = REF #( from_city_tab )
+                         components =
+                           VALUE #( ( name = 'latitude'
+                                      descending = abap_true )
+                                    ( name = 'longitude'
+                                      descending = abap_true ) ) )
+                       ( source     = REF #( to_city_tab )
+                         components =
+                           VALUE #( ( name = 'latitude'
+                                      descending = abap_true )
+                                    ( name = 'longitude'
+                                      descending = abap_true ) ) )
+                       ( source     = REF #( flight_tab )
+                         components =
+                           VALUE #( ( name = 'carrid' )
+                                    ( name = 'connid' ) ) ) ) )
+              ( flight_tab[ <idx> ] ) )
+
+  )->display( ).
+
