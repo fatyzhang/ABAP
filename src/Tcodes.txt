@@ -2,3 +2,22 @@ SE21 - Package Builder
 SE93 - Transaction 
 SU53 - evaluate authorization check
 SE41 - Menu Painter
+
+
+---- Gateway ----
+SEGW - SAP Gateway Service Builder
+/IWFND/MAINT_SERVICE
+/IWFND/APPS_LOG
+/IWFND/VIEW_LOG
+/IWFND/ERROR_LOG
+
+----Fiori----
+/UI2/FLP
+
+----application code----
+SLG1 - display logs
+SLG0 - object maintenance
+SLG2 - delete logs
+
+
+
