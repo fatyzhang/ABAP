@@ -1,14 +1,15 @@
-details about SAP Barcodes
+# SAP Barcodes
+
++ Details about SAP Barcodes
 http://www.erpgreat.com/abap/details-information-about-sap-barcodes.htm
 
-questions for bar code printing in SAP
++ Questions for bar code printing in SAP
 http://www.erpgreat.com/abap/questions-about-bar-code-printing-in-sap.htm
 
-Step by step create barcode for smartforms 
-more details see:
++ Step by step create barcode for smartforms 
 https://wiki.scn.sap.com/wiki/display/Snippets/Step-by-step+New+Barcode+Technology+for+Smart+Forms
 
-Which barcode printer are you using ? download this file and see.
++ Which barcode printer are you using ? download this file and see.
 http://www.servopack.de/Files/HB/ZPLcommands.pdf.
 
 
